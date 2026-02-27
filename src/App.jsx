@@ -690,7 +690,7 @@ export default function App() {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="bg-gray-50">
-                    {["Year","Labor (Before)","Remaining Labor","SR OPEX","SR Depr.","SR Total","Cum. Savings","ROI"].map(h =>
+                    {["Year","Labor (Before)","Remaining Labor","SR OPEX","SR Depr.","SR Total Cost","Cum. Savings","ROI"].map(h =>
                       <th key={h} className="text-right first:text-left p-2 font-semibold text-gray-600">{h}</th>)}
                   </tr>
                 </thead>
@@ -702,7 +702,7 @@ export default function App() {
                       <td className="p-2 text-right text-orange-500">${c(r["Remaining Labor"])}</td>
                       <td className="p-2 text-right text-blue-500">${c(r["SR OPEX"])}</td>
                       <td className="p-2 text-right text-blue-300">${c(r["SR Depreciation"])}</td>
-                      <td className="p-2 text-right text-blue-800 font-semibold">${c(r["SR Total"])}</td>
+                      <td className="p-2 text-right text-blue-800 font-semibold">${c(r["SR Total Cost"])}</td>
                       <td className={`p-2 text-right font-semibold ${r.savings > 0 ? "text-green-600" : "text-gray-400"}`}>
                         {r.savings >= 0 ? `+${c(r.savings)}` : `-${c(Math.abs(r.savings))}`}
                       </td>
