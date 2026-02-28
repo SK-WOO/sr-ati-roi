@@ -18,7 +18,6 @@ const T = {
     wageInflation: "Wage Inflation",
     tabs: ["📦 Production", "🚗 Transport", "👷 Workforce", "🤖 SR Pricing"],
     tabIds: ["prod", "trans", "work", "sr"],
-    // Production
     prodTitle: "Production Parameters",
     prodSub: "Inputs → CAPA & UPH back-calculation",
     regDays: "Regular Working Days / Year",
@@ -37,7 +36,6 @@ const T = {
     dailyMovesSR: "Daily Moves (SR)",
     srCapa: "SR CAPA",
     totalAnnHours: "Total Annual Hours",
-    // Transport
     transTitle: "Transport Cycle Time",
     transSub: "Full manned-driver cycle — 8 steps",
     preDrive: "🔵 Pre-Drive",
@@ -69,7 +67,6 @@ const T = {
     overheadLabel: "⑧ Overhead",
     totalCycleTime: "Total Cycle Time",
     tripsPerShift: "Trips / Driver / Shift",
-    // Workforce
     workTitle: "Workforce Cost",
     workSub: "Regular / Overtime / Holiday premiums",
     empType: "Employment Type",
@@ -103,11 +100,10 @@ const T = {
     annWageP: "Annual Wage / Person",
     totalCostP: "Total Cost / Person",
     totalAnnLabor: "Total Annual Labor",
-    driversPre: "drivers, pre-SR",
+    driversPre: "drivers (100% baseline, pre-SR)",
     benchmark: "📌 HMGMA Benchmark (Hyundai Georgia)",
     benchmarkSub: "UPH ≈ 30 · 67 drivers · $22/hr base",
     estAnnLabor: "Est. annual labor:",
-    // SR Pricing
     srTitle: "SR Solution Pricing",
     srSub: "CAPEX breakdown + OPEX mode selection",
     capexBreakdown: "💰 CAPEX Breakdown",
@@ -138,7 +134,6 @@ const T = {
     annSRTotal: "Annual SR Total",
     yr1Savings: "Year 1 Savings",
     cumBEP: "Cumulative Break-Even",
-    // KPIs
     backCalcUPHkpi: "Back-calc. UPH",
     reqUnitsHr: "Required units/hr",
     cycleTimeKpi: "Cycle Time",
@@ -146,26 +141,23 @@ const T = {
     srDrivers: "SR Drivers",
     breakEven: "Break-Even",
     cumBEPsub: "Cumulative BEP",
-    // Charts
-    annualCostTitle: "📊 Annual Cost — Manned vs SR Solution",
-    annualCostSub: "Labor +{infl}%/yr · SR OPEX +{srGrw}%/yr · SR Coverage {srRatio}% · CAPEX {capex}",
+    annualCostTitle: "📊 Annual Cost — Manned (Baseline) vs SR Solution",
+    annualCostSub: "Baseline labor fixed at 100% · SR Coverage {srRatio}% · CAPEX {capex}",
     cumCostTitle: "📈 Cumulative Cost & Savings",
     cumCostSub: "Depreciation ends after Y{life} · Green dashed = cumulative savings",
     tableTitle: "📋 Year-by-Year ROI Summary",
-    tableHeaders: ["Year","Labor (Before)","Remaining Labor","SR OPEX","SR Depr.","SR Total","Cum. Savings","ROI"],
+    tableHeaders: ["Year","Labor Baseline","Remaining Labor","SR OPEX","SR Depr.","SR Total","Cum. Savings","ROI"],
     netSavings: "-Yr Net Savings",
     afterSRCost: "After full SR cost",
     totalROI: "Total ROI",
     vsCapex: "vs CAPEX over",
     yrs: "yrs",
     maxAnnSavings: "Max Annual Savings",
-    laborMinusSR: "Labor minus SR total",
+    laborMinusSR: "Baseline labor minus SR total",
     negative: "Negative",
-    // Units
     days: "days", hrs: "h", shifts: "shifts", units: "units", pct: "%",
     km: "km", kmh: "km/h", min: "min", perHr: "$/hr", perYr: "$/yr", wks: "wks",
-    pctYr: "%/yr", perMove: "$/move", m2: "m²", perM2Mo: "$/m²/mo", dollar: "$", yrsUnit: "yrs",
-    // Preset modal
+    pctYr: "%/yr", perMoveUnit: "$/move", m2: "m²", perM2Mo: "$/m²/mo", dollar: "$", yrsUnit: "yrs",
     saveFactoryPreset: "💾 Save Factory Preset",
     factoryInfo: "🏭 Factory Info",
     brandOEM: "Brand / OEM", brandPh: "e.g. Hyundai",
@@ -204,7 +196,6 @@ const T = {
     wageInflation: "임금 인상률",
     tabs: ["📦 생산", "🚗 운송", "👷 인력", "🤖 SR 가격"],
     tabIds: ["prod", "trans", "work", "sr"],
-    // Production
     prodTitle: "생산 파라미터",
     prodSub: "입력값 → CAPA & UPH 역산",
     regDays: "연간 정규 근무일",
@@ -223,7 +214,6 @@ const T = {
     dailyMovesSR: "일일 이동 (SR)",
     srCapa: "SR CAPA",
     totalAnnHours: "연간 총 근무시간",
-    // Transport
     transTitle: "운송 사이클 타임",
     transSub: "유인 운전 전체 사이클 — 8단계",
     preDrive: "🔵 운전 전",
@@ -255,7 +245,6 @@ const T = {
     overheadLabel: "⑧ 부가 시간",
     totalCycleTime: "총 사이클 타임",
     tripsPerShift: "교대당 드라이버 운행 횟수",
-    // Workforce
     workTitle: "인건비",
     workSub: "정규 / 초과 / 공휴일 수당",
     empType: "고용 형태",
@@ -288,12 +277,11 @@ const T = {
     effAvgHrly: "실질 평균 시급",
     annWageP: "인당 연간 임금",
     totalCostP: "인당 총 비용",
-    totalAnnLabor: "연간 총 인건비",
-    driversPre: "명 드라이버, SR 도입 전",
+    totalAnnLabor: "연간 총 인건비 (기준)",
+    driversPre: "명 드라이버, 100% 기준",
     benchmark: "📌 HMGMA 기준 (현대 조지아 공장)",
     benchmarkSub: "UPH ≈ 30 · 드라이버 67명 · 기본 $22/시간",
     estAnnLabor: "예상 연간 인건비:",
-    // SR Pricing
     srTitle: "SR 솔루션 가격",
     srSub: "CAPEX 세부 항목 + OPEX 방식 선택",
     capexBreakdown: "💰 CAPEX 세부 항목",
@@ -324,7 +312,6 @@ const T = {
     annSRTotal: "연간 SR 총비용",
     yr1Savings: "1년차 절감액",
     cumBEP: "누적 손익분기점",
-    // KPIs
     backCalcUPHkpi: "역산 UPH",
     reqUnitsHr: "시간당 필요 생산량",
     cycleTimeKpi: "사이클 타임",
@@ -332,26 +319,23 @@ const T = {
     srDrivers: "SR 드라이버",
     breakEven: "손익분기점",
     cumBEPsub: "누적 BEP",
-    // Charts
-    annualCostTitle: "📊 연간 비용 — 유인 vs SR 솔루션",
-    annualCostSub: "인건비 +{infl}%/년 · SR OPEX +{srGrw}%/년 · SR 커버리지 {srRatio}% · CAPEX {capex}",
+    annualCostTitle: "📊 연간 비용 — 유인 기준 vs SR 솔루션",
+    annualCostSub: "기준 인건비 100% 고정 · SR 커버리지 {srRatio}% · CAPEX {capex}",
     cumCostTitle: "📈 누적 비용 및 절감액",
     cumCostSub: "감가상각 Y{life} 이후 종료 · 녹색 점선 = 누적 절감액",
     tableTitle: "📋 연도별 ROI 요약",
-    tableHeaders: ["연도","인건비(도입 전)","잔여 인건비","SR OPEX","SR 감가상각","SR 합계","누적 절감액","ROI"],
+    tableHeaders: ["연도","기준 인건비","잔여 인건비","SR OPEX","SR 감가상각","SR 합계","누적 절감액","ROI"],
     netSavings: "년 순 절감액",
     afterSRCost: "SR 전체 비용 차감 후",
     totalROI: "총 ROI",
     vsCapex: "vs CAPEX,",
     yrs: "년",
     maxAnnSavings: "최대 연간 절감액",
-    laborMinusSR: "인건비 − SR 총비용",
+    laborMinusSR: "기준 인건비 − SR 총비용",
     negative: "마이너스",
-    // Units
     days: "일", hrs: "시간", shifts: "교대", units: "대", pct: "%",
     km: "km", kmh: "km/h", min: "분", perHr: "$/시간", perYr: "$/년", wks: "주",
-    pctYr: "%/년", perMove: "$/이동", m2: "m²", perM2Mo: "$/m²/월", dollar: "$", yrsUnit: "년",
-    // Preset modal
+    pctYr: "%/년", perMoveUnit: "$/이동", m2: "m²", perM2Mo: "$/m²/월", dollar: "$", yrsUnit: "년",
     saveFactoryPreset: "💾 공장 프리셋 저장",
     factoryInfo: "🏭 공장 정보",
     brandOEM: "브랜드 / OEM", brandPh: "예: 현대",
@@ -379,15 +363,19 @@ const T = {
   }
 };
 
+const STORAGE_KEY = "sr-ati-presets-v3";
+function loadPresets() { try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : []; } catch { return []; } }
+function saveToStorage(list) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); return true; } catch { return false; } }
+
 const COUNTRIES = {
-  US: { name: "🇺🇸 미국 / United States",  holidays: 11, avgWage: 52000, surcharge: 30, inflation: 3.0 },
-  KR: { name: "🇰🇷 한국 / South Korea",    holidays: 16, avgWage: 38000, surcharge: 25, inflation: 3.0 },
-  DE: { name: "🇩🇪 독일 / Germany",        holidays: 13, avgWage: 58000, surcharge: 40, inflation: 2.5 },
-  JP: { name: "🇯🇵 일본 / Japan",          holidays: 16, avgWage: 34000, surcharge: 28, inflation: 1.0 },
-  CN: { name: "🇨🇳 중국 / China",          holidays: 11, avgWage: 18000, surcharge: 35, inflation: 2.5 },
-  MX: { name: "🇲🇽 멕시코 / Mexico",       holidays:  7, avgWage: 12000, surcharge: 20, inflation: 5.0 },
-  CZ: { name: "🇨🇿 체코 / Czech Republic", holidays: 13, avgWage: 22000, surcharge: 35, inflation: 4.0 },
-  IN: { name: "🇮🇳 인도 / India",          holidays: 14, avgWage:  8000, surcharge: 20, inflation: 5.0 },
+  US: { name: "🇺🇸 United States",  holidays: 11, avgWage: 52000, surcharge: 30, inflation: 3.0 },
+  KR: { name: "🇰🇷 South Korea",    holidays: 16, avgWage: 38000, surcharge: 25, inflation: 3.0 },
+  DE: { name: "🇩🇪 Germany",        holidays: 13, avgWage: 58000, surcharge: 40, inflation: 2.5 },
+  JP: { name: "🇯🇵 Japan",          holidays: 16, avgWage: 34000, surcharge: 28, inflation: 1.0 },
+  CN: { name: "🇨🇳 China",          holidays: 11, avgWage: 18000, surcharge: 35, inflation: 2.5 },
+  MX: { name: "🇲🇽 Mexico",         holidays:  7, avgWage: 12000, surcharge: 20, inflation: 5.0 },
+  CZ: { name: "🇨🇿 Czech Republic", holidays: 13, avgWage: 22000, surcharge: 35, inflation: 4.0 },
+  IN: { name: "🇮🇳 India",          holidays: 14, avgWage:  8000, surcharge: 20, inflation: 5.0 },
 };
 
 const c  = (n, d = 0) => isNaN(n) || n == null ? "—" : Number(n).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -541,7 +529,7 @@ function PresetPanel({ presets, onLoad, onDelete, onClose, t }) {
                         <div className="text-xs text-gray-500">{p.country} · {new Date(p.savedAt).toLocaleDateString()}</div>
                         {(p.author || p.dept) && <div className="text-xs text-gray-400 mt-0.5">👤 {[p.author, p.dept].filter(Boolean).join(" · ")}</div>}
                         {p.note && <div className="text-xs text-gray-400 mt-0.5 italic">{p.note}</div>}
-                        <div className="text-xs text-blue-600 mt-1">CAPA {c(p.params.capa)} · ${p.params.hrly || "—"}/hr</div>
+                        <div className="text-xs text-blue-600 mt-1">CAPA {c(p.params.capa)} · SR {p.params.srRatio}%</div>
                       </div>
                       <div className="flex flex-col gap-1">
                         <button onClick={() => onLoad(p)} className="text-xs bg-blue-600 text-white px-2 py-1 rounded-lg hover:bg-blue-700 whitespace-nowrap">{t.load}</button>
@@ -564,8 +552,8 @@ export default function App() {
   const [lang, setLang] = useState("en");
   const t = T[lang];
 
-  // In-memory presets (no localStorage)
-  const [presets, setPresets] = useState([]);
+  // ✅ FIX 1: localStorage 복원 (배포 환경용)
+  const [presets, setPresets] = useState(() => loadPresets());
   const [showSave, setShowSave] = useState(false);
   const [showList, setShowList] = useState(false);
   const [loadedName, setLoadedName] = useState(null);
@@ -573,7 +561,10 @@ export default function App() {
   const [toast, setToast] = useState(null);
 
   const showToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 2500); };
-  const savePresets = (list) => setPresets(list);
+  const savePresets = (list) => {
+    setPresets(list);
+    if (!saveToStorage(list)) showToast(t.storageFail, false);
+  };
 
   const [cKey, setCKey] = useState("US");
   const [regDays, setRegDays] = useState(250);
@@ -666,24 +657,30 @@ export default function App() {
     const hps = regHrs + otHrs;
     const totHrs = effDays * hps * nShifts;
     const uph = totHrs > 0 ? capa / (totHrs * (yld / 100)) : 0;
-    const mpd = capa / effDays;
+    const mpd = capa / effDays;           // total daily moves (100% baseline)
     const srCapa = capa * (srRatio / 100);
-    const mpdSR = srCapa / effDays;
+    const mpdSR = srCapa / effDays;       // SR daily moves
+    const mpdManned = mpd - mpdSR;        // remaining manned daily moves
+
     const driveT = (dist / spd) * 60;
     const waitT = tHdwy / 2;
     const cycleT = tPre + driveT + tPark + tWlk1 + waitT + tRide + tWlk2 + tOvhd;
     const tripsPS = (hps * 60) / cycleT;
-    const totalDrvPS = Math.ceil(mpd / (tripsPS * nShifts));
-    const totalDrvTot = totalDrvPS * nShifts;
-    const drvPS = Math.ceil(mpdSR / (tripsPS * nShifts));
-    const drvTot = drvPS * nShifts;
-    const mannedDrvPS = Math.ceil((mpd - mpdSR) / (tripsPS * nShifts));
-    const mannedDrvTot = mannedDrvPS * nShifts;
+
+    // ✅ FIX 2: baseline always uses 100% CAPA for driver count
+    const totalDrvPS  = Math.ceil(mpd / (tripsPS * nShifts));   // 100% baseline drivers per shift
+    const totalDrvTot = totalDrvPS * nShifts;                    // 100% baseline total drivers
+    const drvPS       = Math.ceil(mpdSR / (tripsPS * nShifts)); // SR drivers per shift
+    const drvTot      = drvPS * nShifts;                         // SR drivers total
+    const mannedDrvPS = Math.ceil(mpdManned / (tripsPS * nShifts)); // remaining manned per shift
+    const mannedDrvTot= mannedDrvPS * nShifts;                   // remaining manned total
+
     const hReg = regDays * regHrs;
     const hOt = regDays * otHrs;
     const hHolReg = holDays * regHrs;
     const hHolOt = holDays * otHrs;
     const totHrsP = hReg + hOt + hHolReg + hHolOt;
+
     let annBase;
     const disc = discount / 100;
     if (wageMode === "annual") {
@@ -694,46 +691,68 @@ export default function App() {
     }
     const effHrly = totHrsP > 0 ? annBase / totHrsP : 0;
     const compPP = annBase * (1 + srch / 100);
-    const annLaborTotal = totalDrvTot * compPP;
-    const annLabor = mannedDrvTot * compPP;
+
+    // ✅ FIX 2 핵심: baseline은 항상 100% 드라이버 기준으로 고정
+    const annLaborBaseline = totalDrvTot * compPP;   // 100% 기준 인건비 (SR ratio 무관)
+    const annLaborRemaining = mannedDrvTot * compPP; // SR 도입 후 남은 유인 인건비
+
     const annDepr = capex / life;
     const annOpex = opexMode === "move" ? srCapa * opexPM : opexArea * opexPerM2 * 12;
     const annSRTot = annDepr + annOpex;
+
+    // ✅ ROI: savings = baseline labor - (remaining labor + SR cost)
     const inflR = infl / 100, srGrwR = srGrw / 100;
     let cumL = 0, cumS = 0;
     const chart = Array.from({ length: projYrs }, (_, i) => {
       const y = i + 1;
-      const laborTotal = annLaborTotal * Math.pow(1 + inflR, i);
-      const laborManned = annLabor * Math.pow(1 + inflR, i);
+      const laborBaseline  = annLaborBaseline  * Math.pow(1 + inflR, i);
+      const laborRemaining = annLaborRemaining * Math.pow(1 + inflR, i);
       const opex = annOpex * Math.pow(1 + srGrwR, i);
       const depr = y <= life ? annDepr : 0;
       const srTot = opex + depr;
-      cumL += laborTotal; cumS += srTot;
+      const totalCostAfterSR = laborRemaining + srTot; // 도입 후 총 비용
+      cumL += laborBaseline;
+      cumS += totalCostAfterSR;
       return {
         year: `Y${y}`,
-        "Manned Labor (Before)": Math.round(laborTotal),
-        "Remaining Labor": Math.round(laborManned),
-        "SR OPEX": Math.round(opex),
-        "SR Depreciation": Math.round(depr),
-        "SR Total": Math.round(srTot),
-        "Cum. Labor (Before)": Math.round(cumL),
-        "Cum. SR Solution": Math.round(cumS),
+        "Labor Baseline":    Math.round(laborBaseline),
+        "Remaining Labor":   Math.round(laborRemaining),
+        "SR OPEX":           Math.round(opex),
+        "SR Depreciation":   Math.round(depr),
+        "SR Total":          Math.round(srTot),
+        "Cum. Labor Baseline":   Math.round(cumL),
+        "Cum. After SR":         Math.round(cumS),
         savings: Math.round(cumL - cumS),
       };
     });
+
     const bep = chart.find(r => r.savings > 0)?.year ?? "N/A";
     const finSav = chart[chart.length - 1]?.savings ?? 0;
     const roiPct = capex > 0 ? (finSav / capex) * 100 : 0;
-    return { effDays, totHrs, uph, mpd, srCapa, mpdSR, driveT, waitT, cycleT, tripsPS, totalDrvPS, totalDrvTot, drvPS, drvTot, mannedDrvPS, mannedDrvTot, hReg, hOt, hHolReg, hHolOt, totHrsP, annBase, effHrly, compPP, annLaborTotal, annLabor, annDepr, annOpex, annSRTot, chart, bep, finSav, roiPct };
-  }, [cd, regDays, holDays, regHrs, otHrs, nShifts, capa, yld, srRatio, dist, spd, tPre, tPark, tWlk1, tHdwy, tRide, tWlk2, tOvhd, wType, discount, wageMode, hrly, hpw, wpy, annWage, srch, infl, capex, life, opexMode, opexPM, opexArea, opexPerM2, srGrw, projYrs]);
+    const yr1Savings = annLaborBaseline - (annLaborRemaining + annSRTot);
 
-  // Chart legend labels localized
-  const laborBeforeLabel = lang === "ko" ? "유인 인건비(도입 전)" : "Manned Labor (Before)";
-  const srOpexLabel = lang === "ko" ? "SR OPEX" : "SR OPEX";
-  const srDeprLabel = lang === "ko" ? "SR 감가상각" : "SR Depreciation";
-  const cumLaborLabel = lang === "ko" ? "누적 인건비(도입 전)" : "Cum. Labor (Before)";
-  const cumSRLabel = lang === "ko" ? "누적 SR 비용" : "Cum. SR Solution";
-  const cumSavingsLabel = lang === "ko" ? "누적 절감액" : "Cum. Savings";
+    return {
+      effDays, totHrs, uph, mpd, srCapa, mpdSR, mpdManned,
+      driveT, waitT, cycleT, tripsPS,
+      totalDrvPS, totalDrvTot, drvPS, drvTot, mannedDrvPS, mannedDrvTot,
+      hReg, hOt, hHolReg, hHolOt, totHrsP, annBase, effHrly, compPP,
+      annLaborBaseline, annLaborRemaining, annDepr, annOpex, annSRTot,
+      chart, bep, finSav, roiPct, yr1Savings,
+    };
+  }, [cd, regDays, holDays, regHrs, otHrs, nShifts, capa, yld, srRatio,
+      dist, spd, tPre, tPark, tWlk1, tHdwy, tRide, tWlk2, tOvhd,
+      wType, discount, wageMode, hrly, hpw, wpy, annWage, srch, infl,
+      capex, life, opexMode, opexPM, opexArea, opexPerM2, srGrw, projYrs]);
+
+  const lbl = {
+    laborBaseline:  lang === "ko" ? "기준 인건비 (100%)" : "Labor Baseline (100%)",
+    remaining:      lang === "ko" ? "잔여 유인 인건비"   : "Remaining Manned Labor",
+    srOpex:         lang === "ko" ? "SR OPEX"            : "SR OPEX",
+    srDepr:         lang === "ko" ? "SR 감가상각"        : "SR Depreciation",
+    cumBaseline:    lang === "ko" ? "누적 기준 인건비"   : "Cum. Labor Baseline",
+    cumAfterSR:     lang === "ko" ? "누적 도입 후 비용"  : "Cum. After SR",
+    cumSavings:     lang === "ko" ? "누적 절감액"        : "Cum. Savings",
+  };
 
   return (
     <div className="min-h-screen bg-gray-50" style={{ fontFamily: "system-ui,sans-serif" }}>
@@ -743,15 +762,20 @@ export default function App() {
         </div>
       )}
       {showSave && (
-        <PresetModal
-          params={currentParams()} t={t}
-          onSave={p => { const next = [...presets, p]; savePresets(next); setShowSave(false); setLoadedName(`${p.brand} · ${p.country} · ${p.plant}`); setLoadedIdx(next.length - 1); showToast(t.presetSaved); }}
+        <PresetModal params={currentParams()} t={t}
+          onSave={p => {
+            const next = [...presets, p];
+            savePresets(next);
+            setShowSave(false);
+            setLoadedName(`${p.brand} · ${p.country} · ${p.plant}`);
+            setLoadedIdx(next.length - 1);
+            showToast(t.presetSaved);
+          }}
           onClose={() => setShowSave(false)}
         />
       )}
       {showList && (
-        <PresetPanel
-          presets={presets} t={t}
+        <PresetPanel presets={presets} t={t}
           onLoad={loadPreset}
           onDelete={idx => savePresets(presets.filter((_, i) => i !== idx))}
           onClose={() => setShowList(false)}
@@ -767,16 +791,11 @@ export default function App() {
             <div className="text-blue-200 text-xs">{t.subtitle}</div>
           </div>
           <div className="ml-auto flex flex-wrap items-center gap-2">
-            {/* Language Toggle */}
             <div className="flex rounded-lg overflow-hidden border border-blue-400">
               <button onClick={() => setLang("en")}
-                className={`px-3 py-1.5 text-xs font-bold transition-colors ${lang === "en" ? "bg-white text-blue-700" : "text-blue-200 hover:bg-blue-600"}`}>
-                EN
-              </button>
+                className={`px-3 py-1.5 text-xs font-bold transition-colors ${lang === "en" ? "bg-white text-blue-700" : "text-blue-200 hover:bg-blue-600"}`}>EN</button>
               <button onClick={() => setLang("ko")}
-                className={`px-3 py-1.5 text-xs font-bold transition-colors ${lang === "ko" ? "bg-white text-blue-700" : "text-blue-200 hover:bg-blue-600"}`}>
-                한국어
-              </button>
+                className={`px-3 py-1.5 text-xs font-bold transition-colors ${lang === "ko" ? "bg-white text-blue-700" : "text-blue-200 hover:bg-blue-600"}`}>한국어</button>
             </div>
             <button onClick={() => setShowList(true)}
               className="flex items-center gap-1.5 bg-blue-800 hover:bg-blue-900 text-white text-xs px-3 py-1.5 rounded-lg transition-colors">
@@ -833,16 +852,15 @@ export default function App() {
 
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="flex border-b border-gray-200">
-              {t.tabs.map((lbl, i) => (
+              {t.tabs.map((lbl2, i) => (
                 <button key={t.tabIds[i]} onClick={() => setTab(t.tabIds[i])}
                   className={`flex-1 text-xs py-2 font-medium transition-colors ${tab === t.tabIds[i] ? "bg-blue-600 text-white" : "text-gray-500 hover:bg-gray-50"}`}>
-                  {lbl}
+                  {lbl2}
                 </button>
               ))}
             </div>
             <div className="p-4">
 
-              {/* PRODUCTION */}
               {tab === "prod" && <>
                 <SecHead n="1" title={t.prodTitle} sub={t.prodSub} />
                 <Row label={t.regDays}><Inp v={regDays} set={setRegDays} min={100} max={300} unit={t.days} /></Row>
@@ -856,14 +874,13 @@ export default function App() {
                 <div className="mt-3 bg-blue-50 rounded-lg p-3 grid grid-cols-2 gap-2 text-center text-xs">
                   <div><div className="text-gray-500">{t.effWorkDays}</div><div className="font-bold text-blue-700">{c(R.effDays)} {t.days}</div></div>
                   <div><div className="text-gray-500">{t.backCalcUPH}</div><div className="font-bold text-blue-700">{R.uph.toFixed(1)} /h</div></div>
-                  <div><div className="text-gray-500">{t.dailyMovesTotal}</div><div className="font-bold text-blue-700">{c(Math.round(R.mpd))} /{lang==="ko"?"일":"day"}</div></div>
-                  <div><div className="text-gray-500">{t.dailyMovesSR}</div><div className="font-bold text-blue-700">{c(Math.round(R.mpdSR))} /{lang==="ko"?"일":"day"}</div></div>
+                  <div><div className="text-gray-500">{t.dailyMovesTotal}</div><div className="font-bold text-blue-700">{c(Math.round(R.mpd))}</div></div>
+                  <div><div className="text-gray-500">{t.dailyMovesSR}</div><div className="font-bold text-blue-700">{c(Math.round(R.mpdSR))}</div></div>
                   <div><div className="text-gray-500">{t.srCapa}</div><div className="font-bold text-blue-700">{c(Math.round(R.srCapa))} ({srRatio}%)</div></div>
                   <div><div className="text-gray-500">{t.totalAnnHours}</div><div className="font-bold text-blue-700">{c(R.totHrs)} h</div></div>
                 </div>
               </>}
 
-              {/* TRANSPORT */}
               {tab === "trans" && <>
                 <SecHead n="2" title={t.transTitle} sub={t.transSub} />
                 <div className="text-xs font-bold text-gray-400 mb-1">{t.preDrive}</div>
@@ -882,14 +899,14 @@ export default function App() {
                 <Row label={t.cycleOverhead} hint={t.cycleOverheadHint}><Inp v={tOvhd} set={setTOvhd} min={0} max={30} step={0.5} unit={t.min} /></Row>
                 <div className="mt-3 bg-gray-50 rounded-lg p-3 text-xs">
                   <div className="font-bold text-gray-700 mb-2">{t.cycleBreakdown}</div>
-                  <CR label={t.inspPickup}        value={`${tPre} ${t.min}`} />
-                  <CR label={t.onewayDrive}        value={`${R.driveT.toFixed(1)} ${t.min}`} />
-                  <CR label={t.parkDocs}           value={`${tPark} ${t.min}`} />
-                  <CR label={t.walkShuttle}        value={`${tWlk1} ${t.min}`} />
-                  <CR label={t.shuttleWait}        value={`${R.waitT.toFixed(1)} ${t.min}`} col="text-orange-500" />
-                  <CR label={t.shuttleRideBack}    value={`${tRide} ${t.min}`} />
-                  <CR label={t.walkNextVeh}        value={`${tWlk2} ${t.min}`} />
-                  <CR label={t.overheadLabel}      value={`${tOvhd} ${t.min}`} />
+                  <CR label={t.inspPickup}     value={`${tPre} ${t.min}`} />
+                  <CR label={t.onewayDrive}    value={`${R.driveT.toFixed(1)} ${t.min}`} />
+                  <CR label={t.parkDocs}       value={`${tPark} ${t.min}`} />
+                  <CR label={t.walkShuttle}    value={`${tWlk1} ${t.min}`} />
+                  <CR label={t.shuttleWait}    value={`${R.waitT.toFixed(1)} ${t.min}`} col="text-orange-500" />
+                  <CR label={t.shuttleRideBack} value={`${tRide} ${t.min}`} />
+                  <CR label={t.walkNextVeh}    value={`${tWlk2} ${t.min}`} />
+                  <CR label={t.overheadLabel}  value={`${tOvhd} ${t.min}`} />
                   <div className="flex justify-between pt-2 mt-1 border-t border-gray-300 font-bold">
                     <span className="text-blue-700">{t.totalCycleTime}</span>
                     <span className="text-blue-700">{R.cycleT.toFixed(1)} {t.min}</span>
@@ -900,7 +917,6 @@ export default function App() {
                 </div>
               </>}
 
-              {/* WORKFORCE */}
               {tab === "work" && <>
                 <SecHead n="3" title={t.workTitle} sub={t.workSub} />
                 <Row label={t.empType}>
@@ -933,10 +949,10 @@ export default function App() {
                 <Row label={t.wageInflRate}><Inp v={infl} set={setInfl} min={0} max={30} step={0.1} unit={t.pctYr} /></Row>
                 <div className="mt-3 bg-blue-50 rounded-lg p-3 text-xs">
                   <div className="font-bold text-blue-800 mb-2">{t.payPremium}</div>
-                  <CR label={t.regularHrs}   value="× 1.0 (100%)" />
-                  <CR label={t.weekdayOT}    value="× 1.5 (150%)" col="text-orange-500" />
-                  <CR label={t.holidayWknd}  value="× 2.0 (200%)" col="text-red-600" />
-                  <CR label={t.holidayOT}    value="× 2.0 (highest)" col="text-red-700" />
+                  <CR label={t.regularHrs}  value="× 1.0 (100%)" />
+                  <CR label={t.weekdayOT}   value="× 1.5 (150%)" col="text-orange-500" />
+                  <CR label={t.holidayWknd} value="× 2.0 (200%)" col="text-red-600" />
+                  <CR label={t.holidayOT}   value="× 2.0 (highest)" col="text-red-700" />
                 </div>
                 {wageMode === "hourly" && (
                   <div className="mt-3 bg-gray-50 rounded-lg p-3 text-xs">
@@ -965,7 +981,7 @@ export default function App() {
                   </div>
                   <div className="col-span-2">
                     <div className="text-gray-500">{t.totalAnnLabor} ({c(R.totalDrvTot)} {t.driversPre})</div>
-                    <div className="font-bold text-orange-700 text-xl">{$c(R.annLaborTotal)}</div>
+                    <div className="font-bold text-orange-700 text-xl">{$c(R.annLaborBaseline)}</div>
                   </div>
                 </div>
                 <div className="mt-3 bg-yellow-50 border border-yellow-300 rounded-lg p-3 text-xs">
@@ -977,7 +993,6 @@ export default function App() {
                 </div>
               </>}
 
-              {/* SR PRICING */}
               {tab === "sr" && <>
                 <SecHead n="4" title={t.srTitle} sub={t.srSub} />
                 <div className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">{t.capexBreakdown}</div>
@@ -987,11 +1002,11 @@ export default function App() {
                 <Row label={t.other}><Inp v={capexOther} set={setCapexOther} min={0} max={10000000} step={10000} unit={t.dollar} w="w-28" comma /></Row>
                 <Row label={t.margin} hint={t.marginHint}><Inp v={capexMargin} set={setCapexMargin} min={0} max={50} step={0.5} unit={t.pct} /></Row>
                 <div className="mt-2 bg-purple-50 rounded-lg p-3 text-xs">
-                  <CR label="HW"           value={$c(capexHW)} />
-                  <CR label="NRE"          value={$c(capexNRE)} />
+                  <CR label="HW"             value={$c(capexHW)} />
+                  <CR label="NRE"            value={$c(capexNRE)} />
                   <CR label={t.installation} value={$c(capexInst)} />
-                  <CR label={t.other}      value={$c(capexOther)} />
-                  <CR label={t.subtotal}   value={$c(capexBase)} col="text-gray-700" />
+                  <CR label={t.other}        value={$c(capexOther)} />
+                  <CR label={t.subtotal}     value={$c(capexBase)} col="text-gray-700" />
                   <CR label={`${t.margin} (${capexMargin}%)`} value={$c(capexBase * capexMargin / 100)} col="text-orange-500" />
                   <div className="flex justify-between pt-2 mt-1 border-t border-gray-300 font-bold text-purple-700">
                     <span>{t.totalCapex}</span><span>{$c(capex)}</span>
@@ -1005,12 +1020,13 @@ export default function App() {
                     <button onClick={() => setOpexMode("area")} className={`text-xs px-2 py-1 rounded ${opexMode === "area" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600"}`}>{t.perArea}</button>
                   </div>
                 </Row>
-                {opexMode === "move" ? <>
-                  <Row label={t.opexPerMove}><Inp v={opexPM} set={setOpexPM} min={0.01} max={100} step={0.1} unit={t.perMove} /></Row>
-                </> : <>
-                  <Row label={t.coverageArea} hint={t.coverageAreaHint}><Inp v={opexArea} set={setOpexArea} min={1} max={100000} step={50} unit={t.m2} w="w-28" comma /></Row>
-                  <Row label={t.opexPerM2}><Inp v={opexPerM2} set={setOpexPerM2} min={0.1} max={500} step={0.5} unit={t.perM2Mo} /></Row>
-                </>}
+                {opexMode === "move"
+                  ? <Row label={t.opexPerMove}><Inp v={opexPM} set={setOpexPM} min={0.01} max={100} step={0.1} unit={t.perMoveUnit} /></Row>
+                  : <>
+                    <Row label={t.coverageArea} hint={t.coverageAreaHint}><Inp v={opexArea} set={setOpexArea} min={1} max={100000} step={50} unit={t.m2} w="w-28" comma /></Row>
+                    <Row label={t.opexPerM2}><Inp v={opexPerM2} set={setOpexPerM2} min={0.1} max={500} step={0.5} unit={t.perM2Mo} /></Row>
+                  </>
+                }
                 <Row label={t.srOpexGrowth}><Inp v={srGrw} set={setSrGrw} min={0} max={20} step={0.5} unit={t.pctYr} /></Row>
                 <Row label={t.roiPeriod}><Inp v={projYrs} set={setProjYrs} min={1} max={20} unit={t.yrsUnit} /></Row>
                 <div className="mt-3 bg-purple-50 rounded-lg p-3 grid grid-cols-2 gap-2 text-center text-xs">
@@ -1021,7 +1037,7 @@ export default function App() {
                     <div className="text-gray-400">{opexMode === "move" ? t.moves(c(Math.round(R.srCapa)), opexPM) : t.areaCalc(c(opexArea), opexPerM2)}</div>
                   </div>
                   <div><div className="text-gray-500">{t.annSRTotal}</div><div className="font-bold text-purple-800 text-base">{$c(R.annSRTot)}</div></div>
-                  <div><div className="text-gray-500">{t.yr1Savings}</div><div className="font-bold text-green-700 text-base">{$c(R.annLaborTotal - R.annSRTot)}</div></div>
+                  <div><div className="text-gray-500">{t.yr1Savings}</div><div className={`font-bold text-base ${R.yr1Savings > 0 ? "text-green-700" : "text-red-500"}`}>{$c(R.yr1Savings)}</div></div>
                   <div className="col-span-2"><div className="text-gray-500">{t.cumBEP}</div><div className="font-bold text-purple-700 text-xl">{R.bep}</div></div>
                 </div>
               </>}
@@ -1032,36 +1048,35 @@ export default function App() {
         {/* RIGHT */}
         <div className="lg:col-span-3 space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <KPI label={t.backCalcUPHkpi}  value={`${R.uph.toFixed(1)}/h`}      sub={t.reqUnitsHr} />
-            <KPI label={t.cycleTimeKpi}    value={`${R.cycleT.toFixed(0)} ${t.min}`} sub={t.stepTotal} />
-            <KPI label={t.srDrivers}       value={c(R.drvTot)}                   sub={t.srPerShift(c(R.drvPS), nShifts, srRatio)} hi />
-            <KPI label={t.breakEven}       value={R.bep}                         sub={t.cumBEPsub} hi />
+            <KPI label={t.backCalcUPHkpi} value={`${R.uph.toFixed(1)}/h`}        sub={t.reqUnitsHr} />
+            <KPI label={t.cycleTimeKpi}   value={`${R.cycleT.toFixed(0)} ${t.min}`} sub={t.stepTotal} />
+            <KPI label={t.srDrivers}      value={c(R.drvTot)}                     sub={t.srPerShift(c(R.drvPS), nShifts, srRatio)} hi />
+            <KPI label={t.breakEven}      value={R.bep}                            sub={t.cumBEPsub} hi />
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-4">
             <div className="font-bold text-gray-700 mb-1 text-sm">{t.annualCostTitle}</div>
             <div className="text-xs text-gray-400 mb-3">
-              {t.annualCostSub.replace("{infl}", infl.toFixed(1)).replace("{srGrw}", srGrw).replace("{srRatio}", srRatio).replace("{capex}", $c(capex))}
+              {t.annualCostSub.replace("{srRatio}", srRatio).replace("{capex}", $c(capex))}
             </div>
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={210}>
               <BarChart data={R.chart} margin={{ top:4, right:8, left:0, bottom:0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="year" tick={{ fontSize:11 }} />
                 <YAxis tickFormatter={v => `$${(v/1e6).toFixed(1)}M`} tick={{ fontSize:10 }} width={55} />
                 <Tooltip formatter={v => [`$${c(v)}`, ""]} />
                 <Legend wrapperStyle={{ fontSize:11 }} />
-                <Bar dataKey="Manned Labor (Before)" name={laborBeforeLabel} fill="#ef4444" />
-                <Bar dataKey="SR OPEX"         name={srOpexLabel} stackId="sr" fill="#3b82f6" />
-                <Bar dataKey="SR Depreciation" name={srDeprLabel} stackId="sr" fill="#93c5fd" />
+                <Bar dataKey="Labor Baseline"  name={lbl.laborBaseline} fill="#ef4444" />
+                <Bar dataKey="Remaining Labor" name={lbl.remaining}     fill="#f97316" stackId="after" />
+                <Bar dataKey="SR OPEX"         name={lbl.srOpex}        fill="#3b82f6" stackId="after" />
+                <Bar dataKey="SR Depreciation" name={lbl.srDepr}        fill="#93c5fd" stackId="after" />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-4">
             <div className="font-bold text-gray-700 mb-1 text-sm">{t.cumCostTitle}</div>
-            <div className="text-xs text-gray-400 mb-3">
-              {t.cumCostSub.replace("{life}", life)}
-            </div>
+            <div className="text-xs text-gray-400 mb-3">{t.cumCostSub.replace("{life}", life)}</div>
             <ResponsiveContainer width="100%" height={210}>
               <LineChart data={R.chart} margin={{ top:4, right:8, left:0, bottom:0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -1069,9 +1084,9 @@ export default function App() {
                 <YAxis tickFormatter={v => `$${(v/1e6).toFixed(1)}M`} tick={{ fontSize:10 }} width={55} />
                 <Tooltip formatter={v => [`$${c(v)}`, ""]} />
                 <Legend wrapperStyle={{ fontSize:11 }} />
-                <Line type="monotone" dataKey="Cum. Labor (Before)" name={cumLaborLabel} stroke="#ef4444" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="Cum. SR Solution"    name={cumSRLabel}    stroke="#3b82f6" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="savings" name={cumSavingsLabel} stroke="#10b981" strokeWidth={2} strokeDasharray="5 5" dot={{ r:3 }} />
+                <Line type="monotone" dataKey="Cum. Labor Baseline" name={lbl.cumBaseline} stroke="#ef4444" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="Cum. After SR"       name={lbl.cumAfterSR}  stroke="#f97316" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="savings" name={lbl.cumSavings} stroke="#10b981" strokeWidth={2} strokeDasharray="5 5" dot={{ r:3 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -1082,14 +1097,14 @@ export default function App() {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="bg-gray-50">
-                    {t.tableHeaders.map(h => <th key={h} className="text-right first:text-left p-2 font-semibold text-gray-600">{h}</th>)}
+                    {t.tableHeaders.map(h => <th key={h} className="text-right first:text-left p-2 font-semibold text-gray-600 whitespace-nowrap">{h}</th>)}
                   </tr>
                 </thead>
                 <tbody>
                   {R.chart.map((r, i) => (
                     <tr key={i} className={`border-t border-gray-100 ${r.savings > 0 ? "bg-green-50" : ""}`}>
                       <td className="p-2 font-medium">{r.year}</td>
-                      <td className="p-2 text-right text-red-400">${c(r["Manned Labor (Before)"])}</td>
+                      <td className="p-2 text-right text-red-400">${c(r["Labor Baseline"])}</td>
                       <td className="p-2 text-right text-orange-500">${c(r["Remaining Labor"])}</td>
                       <td className="p-2 text-right text-blue-500">${c(r["SR OPEX"])}</td>
                       <td className="p-2 text-right text-blue-300">${c(r["SR Depreciation"])}</td>
@@ -1110,7 +1125,7 @@ export default function App() {
           <div className="grid grid-cols-3 gap-3">
             <KPI label={`${projYrs}${t.netSavings}`} value={R.finSav > 0 ? $M(R.finSav) : t.negative} sub={t.afterSRCost} hi={R.finSav > 0} />
             <KPI label={t.totalROI} value={R.finSav > 0 ? `${c(R.roiPct, 0)}%` : "—"} sub={`${t.vsCapex} ${projYrs} ${t.yrs}`} />
-            <KPI label={t.maxAnnSavings} value={$M(R.annLaborTotal - R.annSRTot)} sub={t.laborMinusSR} />
+            <KPI label={t.maxAnnSavings} value={$M(R.annLaborBaseline - R.annSRTot)} sub={t.laborMinusSR} />
           </div>
         </div>
       </div>
