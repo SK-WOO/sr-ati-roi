@@ -4,6 +4,66 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from "recharts";
 
+// ── Version & Changelog ────────────────────────────────
+const VERSION = "v1.5.0";
+const BUILD_DATE = "2026-03-13";
+const CHANGELOG = [
+  {
+    version: "v1.5.0", date: "2026-03-13",
+    en: ["Added version badge & changelog modal to header",
+         "Fixed area-mode OPEX description bug (stale opexPerM2 reference)"],
+    ko: ["헤더에 버전 배지 및 변경 이력 모달 추가",
+         "면적 방식 OPEX 설명 버그 수정 (구 변수 참조 오류)"],
+  },
+  {
+    version: "v1.4.0", date: "2026-03-13",
+    en: ["CAPEX: added Overhead (15%), First Plant Discount (40%), Difficulty Factor (×NRE)",
+         "OPEX area mode: broken down into HW Warranty / Site Support / SW Update / Overhaul",
+         "OPEX annual discount schedule (Year-1 30%, −3%/yr)",
+         "Preset storage key upgraded to v4"],
+    ko: ["CAPEX: 오버헤드(15%), 초도 할인율(40%), 난이도 계수(NRE 반영) 추가",
+         "OPEX 면적 방식: HW보증 / 현장지원 / SW업데이트 / 오버홀 세분화",
+         "OPEX 연도별 할인율 일정 추가 (1년차 30%, −3%/년)",
+         "프리셋 저장 키 v4로 업그레이드"],
+  },
+  {
+    version: "v1.3.1", date: "2026-03-13",
+    en: ["Fixed allowed domain: seoulrobotics.com → seoulrobotics.org",
+         "Removed hd parameter to fix Google login button not rendering"],
+    ko: ["허용 도메인 수정: seoulrobotics.com → seoulrobotics.org",
+         "hd 파라미터 제거로 Google 로그인 버튼 미표시 문제 해결"],
+  },
+  {
+    version: "v1.3.0", date: "2026-03-13",
+    en: ["Security: restricted login to @seoulrobotics.org Google accounts only",
+         "Security: added clamp validation on all localStorage preset parameters"],
+    ko: ["보안: Google 로그인을 @seoulrobotics.org 계정만 허용",
+         "보안: localStorage 프리셋 전체 파라미터 범위 검증 추가"],
+  },
+  {
+    version: "v1.2.0", date: "2026-03-12",
+    en: ["Fixed preset save logic", "Fixed SR ROI calculation logic"],
+    ko: ["프리셋 저장 로직 수정", "SR ROI 계산 로직 수정"],
+  },
+  {
+    version: "v1.1.0", date: "2026-03-12",
+    en: ["Added EN / KR language toggle"],
+    ko: ["EN / KR 언어 전환 추가"],
+  },
+  {
+    version: "v1.0.1", date: "2026-03-12",
+    en: ["Fixed SR Total calculation"],
+    ko: ["SR Total 계산 수정"],
+  },
+  {
+    version: "v1.0.0", date: "2026-03-12",
+    en: ["Initial release: Production / Transport / Workforce / SR Pricing tabs",
+         "Google OAuth login", "Factory preset save/load", "ROI charts & table"],
+    ko: ["초기 릴리즈: 생산 / 운송 / 인력 / SR 가격 탭",
+         "Google OAuth 로그인", "공장 프리셋 저장/불러오기", "ROI 차트 및 테이블"],
+  },
+];
+
 // ── Google Auth ────────────────────────────────────────
 const CLIENT_ID = "318386102464-2bavuh812hpk4gsegb5tkvrsnhartsm9.apps.googleusercontent.com";
 const ALLOWED_DOMAIN = "seoulrobotics.org";
@@ -301,6 +361,8 @@ const T = {
     swUpdateLbl: "SW Update",
     overhaulLbl: "Overhaul (ann.)",
     opexDirectLbl: "Direct OPEX",
+    changelog: "Changelog",
+    changelogTitle: "Release Notes",
   },
   ko: {
     title: "SR ATI ROI 계산기",
@@ -508,6 +570,8 @@ const T = {
     swUpdateLbl: "SW 업데이트",
     overhaulLbl: "오버홀 (연간)",
     opexDirectLbl: "직접 OPEX",
+    changelog: "변경 이력",
+    changelogTitle: "릴리즈 노트",
   }
 };
 
@@ -690,6 +754,38 @@ function PresetPanel({ presets, onLoad, onDelete, onClose, t }) {
   );
 }
 
+function ChangelogModal({ onClose, lang }) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl shadow-xl w-[480px] max-h-[80vh] flex flex-col">
+        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+          <div>
+            <div className="font-bold text-gray-800">{lang === "ko" ? "릴리즈 노트" : "Release Notes"}</div>
+            <div className="text-xs text-gray-400 mt-0.5">SR ATI ROI Calculator · {VERSION} · {BUILD_DATE}</div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
+        </div>
+        <div className="overflow-auto flex-1 p-4 space-y-4">
+          {CHANGELOG.map(entry => (
+            <div key={entry.version}>
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${entry.version === VERSION ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600"}`}>{entry.version}</span>
+                <span className="text-xs text-gray-400">{entry.date}</span>
+                {entry.version === VERSION && <span className="text-xs text-blue-500 font-semibold">← {lang === "ko" ? "현재" : "current"}</span>}
+              </div>
+              <ul className="space-y-0.5 pl-1">
+                {(lang === "ko" ? entry.ko : entry.en).map((line, i) => (
+                  <li key={i} className="text-xs text-gray-600 flex gap-1.5"><span className="text-gray-300 mt-0.5">•</span><span>{line}</span></li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   // ── Google Auth ──
   const { user: googleUser, ready: gsiReady, logout: googleLogout } = useGoogleAuth();
@@ -703,6 +799,7 @@ export default function App() {
   const [loadedName, setLoadedName] = useState(null);
   const [loadedIdx, setLoadedIdx] = useState(null);
   const [toast, setToast] = useState(null);
+  const [showChangelog, setShowChangelog] = useState(false);
 
   const showToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 2500); };
   const savePresets = (list) => { setPresets(list); if (!saveToStorage(list)) showToast(t.storageFail, false); };
@@ -977,6 +1074,7 @@ export default function App() {
           onClose={() => setShowList(false)}
         />
       )}
+      {showChangelog && <ChangelogModal onClose={() => setShowChangelog(false)} lang={lang} />}
 
       {/* Header */}
       <div className="bg-blue-700 text-white px-6 py-4">
@@ -984,7 +1082,13 @@ export default function App() {
           <div className="text-2xl font-black">SR</div>
           <div className="border-l border-blue-400 pl-3">
             <div className="font-bold text-lg">{t.title}</div>
-            <div className="text-blue-200 text-xs">{t.subtitle}</div>
+            <div className="flex items-center gap-2 mt-0.5">
+              <div className="text-blue-200 text-xs">{t.subtitle}</div>
+              <button onClick={() => setShowChangelog(true)}
+                className="text-xs bg-blue-800 hover:bg-blue-900 text-blue-300 hover:text-white px-2 py-0.5 rounded-full transition-colors">
+                {VERSION} · {BUILD_DATE}
+              </button>
+            </div>
           </div>
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <a href="https://seoulrobotics.atlassian.net/wiki/x/EAAi5"
@@ -1262,7 +1366,7 @@ export default function App() {
                   <div>
                     <div className="text-gray-500">{t.annOpex}</div>
                     <div className="font-bold text-purple-700">{$c(R.annOpex)}</div>
-                    <div className="text-gray-400">{opexMode === "move" ? t.moves(c(Math.round(R.srCapa)), opexPM) : t.areaCalc(c(opexArea), opexPerM2)}</div>
+                    <div className="text-gray-400">{opexMode === "move" ? t.moves(c(Math.round(R.srCapa)), opexPM) : `${c(opexArea)}m² (warranty+support+SW+OH)`}</div>
                   </div>
                   <div><div className="text-gray-500">{t.annSRTotal}</div><div className="font-bold text-purple-800 text-base">{$c(R.annSRTot)}</div></div>
                   <div><div className="text-gray-500">{t.yr1Savings}</div><div className={`font-bold text-base ${R.yr1Savings > 0 ? "text-green-700" : "text-red-500"}`}>{$c(R.yr1Savings)}</div></div>
