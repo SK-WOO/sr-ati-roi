@@ -274,6 +274,34 @@ const T = {
     areaCalc: (area, pm) => `${area}m² × $${pm}/mo × 12`,
     benefitsPct: (pct) => `+ ${pct}% benefits`,
     logout: "Logout",
+    capexOverhead: "Overhead Costs",
+    capexOverheadHint: "Applied to CAPEX base before margin",
+    capexDiscount: "First Plant Discount",
+    capexDiscountHint: "Initial project discount (e.g. 40% for first site)",
+    diffFactor: "Difficulty Factor",
+    diffFactorHint: "1.0 (easy) ~ 1.5 (hard) — multiplied to NRE",
+    opexDetail: "⚙️ OPEX Detail (Area mode)",
+    hwWarrantyRate: "HW Warranty Rate",
+    hwWarrantyRateHint: "Annual % of Hardware cost",
+    supportPerM2: "Site Support / m²",
+    supportPerM2Hint: "Remote monitoring + on-site troubleshooting",
+    swUpdatePerM2: "SW Update / m²",
+    swUpdatePerM2Hint: "OTA, firmware, bug fixes",
+    overhaulRate: "Overhaul Rate",
+    overhaulRateHint: "% of HW cost per overhaul cycle",
+    overhaulCycle: "Overhaul Cycle",
+    overhaulCycleHint: "Years between major hardware overhauls",
+    opexDiscountTitle: "📉 OPEX Discount Schedule",
+    opexDiscount1: "Year 1 OPEX Discount",
+    opexDiscount1Hint: "First year discount on OPEX (e.g. First Plant)",
+    opexDiscountStep: "Annual Discount Decrease",
+    opexDiscountStepHint: "Discount reduces by this % each year",
+    opexBreakdown: "📋 OPEX Breakdown (Area mode)",
+    hwWarrantyLbl: "HW Warranty",
+    siteSupportLbl: "Site Support",
+    swUpdateLbl: "SW Update",
+    overhaulLbl: "Overhaul (ann.)",
+    opexDirectLbl: "Direct OPEX",
   },
   ko: {
     title: "SR ATI ROI 계산기",
@@ -453,10 +481,38 @@ const T = {
     areaCalc: (area, pm) => `${area}m² × $${pm}/월 × 12`,
     benefitsPct: (pct) => `+ ${pct}% 복리후생`,
     logout: "로그아웃",
+    capexOverhead: "오버헤드 비용",
+    capexOverheadHint: "마진 전 CAPEX 기준에 적용",
+    capexDiscount: "초도 할인율",
+    capexDiscountHint: "초도 프로젝트 할인 (예: 첫 사이트 40%)",
+    diffFactor: "난이도 계수",
+    diffFactorHint: "1.0 (쉬움) ~ 1.5 (어려움) — NRE에 곱해짐",
+    opexDetail: "⚙️ OPEX 세부항목 (면적 방식)",
+    hwWarrantyRate: "HW 보증 비율",
+    hwWarrantyRateHint: "하드웨어 비용의 연간 %",
+    supportPerM2: "현장지원 / m²",
+    supportPerM2Hint: "원격 모니터링 + 현장 트러블슈팅",
+    swUpdatePerM2: "SW 업데이트 / m²",
+    swUpdatePerM2Hint: "OTA, 펌웨어, 버그수정",
+    overhaulRate: "오버홀 비율",
+    overhaulRateHint: "오버홀 주기당 HW 비용 %",
+    overhaulCycle: "오버홀 주기",
+    overhaulCycleHint: "주요 HW 오버홀 간격 (년)",
+    opexDiscountTitle: "📉 OPEX 할인율 일정",
+    opexDiscount1: "1년차 OPEX 할인율",
+    opexDiscount1Hint: "1년차 OPEX 할인 (예: 초도 사이트)",
+    opexDiscountStep: "연간 할인율 감소",
+    opexDiscountStepHint: "매년 이 %만큼 할인율 감소",
+    opexBreakdown: "📋 OPEX 세부항목 (면적 방식)",
+    hwWarrantyLbl: "HW 보증",
+    siteSupportLbl: "현장지원",
+    swUpdateLbl: "SW 업데이트",
+    overhaulLbl: "오버홀 (연간)",
+    opexDirectLbl: "직접 OPEX",
   }
 };
 
-const STORAGE_KEY = "sr-ati-presets-v3";
+const STORAGE_KEY = "sr-ati-presets-v4";
 function loadPresets() { try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : []; } catch { return []; } }
 function saveToStorage(list) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); return true; } catch { return false; } }
 const clamp = (v, min, max, fallback) => { const n = Number(v); return (isNaN(n) || !isFinite(n)) ? fallback : Math.min(Math.max(n, min), max); };
@@ -692,10 +748,22 @@ export default function App() {
   const [srGrw, setSrGrw] = useState(1.0);
   const [projYrs, setProjYrs] = useState(7);
   const [tab, setTab] = useState("prod");
+  const [capexOverhead, setCapexOverhead] = useState(15);
+  const [capexDiscount, setCapexDiscount] = useState(40);
+  const [diffFactor, setDiffFactor] = useState(1.2);
+  const [hwWarrantyRate, setHwWarrantyRate] = useState(20);
+  const [supportPerM2, setSupportPerM2] = useState(10.66);
+  const [swUpdatePerM2, setSwUpdatePerM2] = useState(10.09);
+  const [overhaulRate, setOverhaulRate] = useState(10);
+  const [overhaulCycle, setOverhaulCycle] = useState(5);
+  const [opexDiscount1, setOpexDiscount1] = useState(30);
+  const [opexDiscountStep, setOpexDiscountStep] = useState(3);
 
   const cd = COUNTRIES[cKey];
-  const capexBase = capexHW + capexNRE + capexInst + capexOther;
-  const capex = capexBase * (1 + capexMargin / 100);
+  const capexBase = capexHW + capexNRE * diffFactor + capexInst + capexOther;
+  const capexAfterOverhead = capexBase * (1 + capexOverhead / 100);
+  const capexAfterMargin = capexAfterOverhead * (1 + capexMargin / 100);
+  const capex = capexAfterMargin * (1 - capexDiscount / 100);
 
   const currentParams = () => ({
     cKey, regDays, holDays, regHrs, otHrs, nShifts, capa, yld, srRatio,
@@ -703,6 +771,9 @@ export default function App() {
     wType, discount, wageMode, hrly, hpw, wpy, annWage, srch, infl,
     capexHW, capexNRE, capexInst, capexOther, capexMargin, life,
     opexMode, opexPM, opexArea, opexPerM2, srGrw, projYrs,
+    capexOverhead, capexDiscount, diffFactor,
+    hwWarrantyRate, supportPerM2, swUpdatePerM2, overhaulRate, overhaulCycle,
+    opexDiscount1, opexDiscountStep,
   });
 
   const loadPreset = (preset) => {
@@ -746,6 +817,16 @@ export default function App() {
     setOpexPerM2(clamp(p.opexPerM2 ?? 5, 0.1, 500, 5));
     setSrGrw(clamp(p.srGrw, 0, 20, 1));
     setProjYrs(clamp(p.projYrs, 1, 20, 7));
+    setCapexOverhead(clamp(p.capexOverhead ?? 15, 0, 50, 15));
+    setCapexDiscount(clamp(p.capexDiscount ?? 40, 0, 80, 40));
+    setDiffFactor(clamp(p.diffFactor ?? 1.2, 1.0, 1.5, 1.2));
+    setHwWarrantyRate(clamp(p.hwWarrantyRate ?? 20, 0, 50, 20));
+    setSupportPerM2(clamp(p.supportPerM2 ?? 10.66, 0, 100, 10.66));
+    setSwUpdatePerM2(clamp(p.swUpdatePerM2 ?? 10.09, 0, 100, 10.09));
+    setOverhaulRate(clamp(p.overhaulRate ?? 10, 0, 50, 10));
+    setOverhaulCycle(clamp(p.overhaulCycle ?? 5, 1, 20, 5));
+    setOpexDiscount1(clamp(p.opexDiscount1 ?? 30, 0, 80, 30));
+    setOpexDiscountStep(clamp(p.opexDiscountStep ?? 3, 0, 20, 3));
     setLoadedName(`${preset.brand} · ${preset.country} · ${preset.plant}`);
     setLoadedIdx(preset._idx);
     setShowList(false);
@@ -801,7 +882,17 @@ export default function App() {
     const annLaborBaseline = totalDrvTot * compPP;
     const annLaborRemaining = mannedDrvTot * compPP;
     const annDepr = capex / life;
-    const annOpex = opexMode === "move" ? srCapa * opexPM : opexArea * opexPerM2 * 12;
+    let annOpex;
+    if (opexMode === "move") {
+      annOpex = srCapa * opexPM;
+    } else {
+      const hwWarranty = capexHW * (hwWarrantyRate / 100);
+      const siteSup = opexArea * supportPerM2;
+      const swUpd = opexArea * swUpdatePerM2;
+      const overhaulAnn = (capexHW * overhaulRate / 100) / Math.max(1, overhaulCycle);
+      const opexDirect = hwWarranty + siteSup + swUpd + overhaulAnn;
+      annOpex = opexDirect * (1 + capexOverhead / 100) * (1 + capexMargin / 100);
+    }
     const annSRTot = annDepr + annOpex;
     const inflR = infl / 100, srGrwR = srGrw / 100;
     let cumL = 0, cumS = 0;
@@ -809,7 +900,8 @@ export default function App() {
       const y = i + 1;
       const laborBaseline  = annLaborBaseline  * Math.pow(1 + inflR, i);
       const laborRemaining = annLaborRemaining * Math.pow(1 + inflR, i);
-      const opex = annOpex * Math.pow(1 + srGrwR, i);
+      const opexDiscRate = Math.max(0, opexDiscount1 - opexDiscountStep * i) / 100;
+      const opex = annOpex * (1 - opexDiscRate) * Math.pow(1 + srGrwR, i);
       const depr = y <= life ? annDepr : 0;
       const srTot = opex + depr;
       const totalCostAfterSR = laborRemaining + srTot;
@@ -842,7 +934,9 @@ export default function App() {
   }, [cd, regDays, holDays, regHrs, otHrs, nShifts, capa, yld, srRatio,
       dist, spd, tPre, tPark, tWlk1, tHdwy, tRide, tWlk2, tOvhd,
       wType, discount, wageMode, hrly, hpw, wpy, annWage, srch, infl,
-      capex, life, opexMode, opexPM, opexArea, opexPerM2, srGrw, projYrs]);
+      capex, life, opexMode, opexPM, opexArea, opexPerM2, srGrw, projYrs,
+      capexHW, capexOverhead, capexMargin, diffFactor, hwWarrantyRate, supportPerM2,
+      swUpdatePerM2, overhaulRate, overhaulCycle, opexDiscount1, opexDiscountStep]);
 
   const lbl = {
     laborBaseline:  lang === "ko" ? "기준 인건비 (100%)" : "Labor Baseline (100%)",
@@ -1113,13 +1207,18 @@ export default function App() {
                 <Row label={t.installation}><Inp v={capexInst} set={setCapexInst} min={0} max={10000000} step={50000} unit={t.dollar} w="w-28" comma /></Row>
                 <Row label={t.other}><Inp v={capexOther} set={setCapexOther} min={0} max={10000000} step={10000} unit={t.dollar} w="w-28" comma /></Row>
                 <Row label={t.margin} hint={t.marginHint}><Inp v={capexMargin} set={setCapexMargin} min={0} max={50} step={0.5} unit={t.pct} /></Row>
+                <Row label={t.capexOverhead} hint={t.capexOverheadHint}><Inp v={capexOverhead} set={setCapexOverhead} min={0} max={50} step={1} unit={t.pct} /></Row>
+                <Row label={t.capexDiscount} hint={t.capexDiscountHint}><Inp v={capexDiscount} set={setCapexDiscount} min={0} max={80} step={1} unit={t.pct} /></Row>
+                <Row label={t.diffFactor} hint={t.diffFactorHint}><Inp v={diffFactor} set={setDiffFactor} min={1.0} max={1.5} step={0.05} /></Row>
                 <div className="mt-2 bg-purple-50 rounded-lg p-3 text-xs">
                   <CR label="HW"             value={$c(capexHW)} />
-                  <CR label="NRE"            value={$c(capexNRE)} />
+                  <CR label={`NRE (×${diffFactor})`} value={$c(capexNRE * diffFactor)} />
                   <CR label={t.installation} value={$c(capexInst)} />
                   <CR label={t.other}        value={$c(capexOther)} />
                   <CR label={t.subtotal}     value={$c(capexBase)} col="text-gray-700" />
-                  <CR label={`${t.margin} (${capexMargin}%)`} value={$c(capexBase * capexMargin / 100)} col="text-orange-500" />
+                  <CR label={`${t.capexOverhead} (${capexOverhead}%)`} value={$c(capexBase * capexOverhead / 100)} col="text-blue-500" />
+                  <CR label={`${t.margin} (${capexMargin}%)`} value={$c(capexAfterOverhead * capexMargin / 100)} col="text-orange-500" />
+                  <CR label={`${t.capexDiscount} (-${capexDiscount}%)`} value={`-${$c(capexAfterMargin * capexDiscount / 100)}`} col="text-green-600" />
                   <div className="flex justify-between pt-2 mt-1 border-t border-gray-300 font-bold text-purple-700">
                     <span>{t.totalCapex}</span><span>{$c(capex)}</span>
                   </div>
@@ -1136,10 +1235,28 @@ export default function App() {
                   ? <Row label={t.opexPerMove}><Inp v={opexPM} set={setOpexPM} min={0.01} max={100} step={0.1} unit={t.perMoveUnit} /></Row>
                   : <>
                     <Row label={t.coverageArea} hint={t.coverageAreaHint}><Inp v={opexArea} set={setOpexArea} min={1} max={100000} step={50} unit={t.m2} w="w-28" comma /></Row>
-                    <Row label={t.opexPerM2}><Inp v={opexPerM2} set={setOpexPerM2} min={0.1} max={500} step={0.5} unit={t.perM2Mo} /></Row>
+                    <div className="mt-2 text-xs font-bold text-gray-400 uppercase tracking-wide">{t.opexDetail}</div>
+                    <Row label={t.hwWarrantyRate} hint={t.hwWarrantyRateHint}><Inp v={hwWarrantyRate} set={setHwWarrantyRate} min={0} max={50} step={1} unit={t.pct} /></Row>
+                    <Row label={t.supportPerM2} hint={t.supportPerM2Hint}><Inp v={supportPerM2} set={setSupportPerM2} min={0} max={100} step={0.1} unit="$/m²" /></Row>
+                    <Row label={t.swUpdatePerM2} hint={t.swUpdatePerM2Hint}><Inp v={swUpdatePerM2} set={setSwUpdatePerM2} min={0} max={100} step={0.1} unit="$/m²" /></Row>
+                    <Row label={t.overhaulRate} hint={t.overhaulRateHint}><Inp v={overhaulRate} set={setOverhaulRate} min={0} max={50} step={1} unit={t.pct} /></Row>
+                    <Row label={t.overhaulCycle} hint={t.overhaulCycleHint}><Inp v={overhaulCycle} set={setOverhaulCycle} min={1} max={20} unit={t.yrsUnit} /></Row>
+                    {opexMode === "area" && (
+                      <div className="mt-2 bg-blue-50 rounded-lg p-3 text-xs">
+                        <div className="font-bold text-blue-800 mb-2">{t.opexBreakdown}</div>
+                        <CR label={t.hwWarrantyLbl} value={$c(capexHW * hwWarrantyRate / 100)} />
+                        <CR label={t.siteSupportLbl} value={$c(opexArea * supportPerM2)} />
+                        <CR label={t.swUpdateLbl} value={$c(opexArea * swUpdatePerM2)} />
+                        <CR label={t.overhaulLbl} value={$c((capexHW * overhaulRate / 100) / Math.max(1, overhaulCycle))} />
+                        <CR label={t.opexDirectLbl} value={$c(capexHW * hwWarrantyRate / 100 + opexArea * supportPerM2 + opexArea * swUpdatePerM2 + (capexHW * overhaulRate / 100) / Math.max(1, overhaulCycle))} col="text-gray-700" />
+                      </div>
+                    )}
                   </>
                 }
                 <Row label={t.srOpexGrowth}><Inp v={srGrw} set={setSrGrw} min={0} max={20} step={0.5} unit={t.pctYr} /></Row>
+                <div className="mt-2 text-xs font-bold text-gray-400 uppercase tracking-wide">{t.opexDiscountTitle}</div>
+                <Row label={t.opexDiscount1} hint={t.opexDiscount1Hint}><Inp v={opexDiscount1} set={setOpexDiscount1} min={0} max={80} step={1} unit={t.pct} /></Row>
+                <Row label={t.opexDiscountStep} hint={t.opexDiscountStepHint}><Inp v={opexDiscountStep} set={setOpexDiscountStep} min={0} max={20} step={1} unit={`${t.pctYr}`} /></Row>
                 <Row label={t.roiPeriod}><Inp v={projYrs} set={setProjYrs} min={1} max={20} unit={t.yrsUnit} /></Row>
                 <div className="mt-3 bg-purple-50 rounded-lg p-3 grid grid-cols-2 gap-2 text-center text-xs">
                   <div><div className="text-gray-500">{t.annDepr}</div><div className="font-bold text-purple-700">{$c(R.annDepr)}</div></div>
