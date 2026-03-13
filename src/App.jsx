@@ -862,15 +862,15 @@ function Inp({ v, set, min = 0, max = 1e9, step = 1, unit, w = "w-24", comma = f
     ? Number(v).toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec })
     : Number(v).toFixed(dec);
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1 min-w-0">
       <input type="text" inputMode="decimal"
         value={focused ? draft : formatted}
         onFocus={() => { setFocused(true); setDraft(String(v)); }}
         onChange={e => { const s = e.target.value.replace(/,/g, ""); setDraft(s); const n = parseFloat(s); if (!isNaN(n)) set(n); }}
         onBlur={() => { setFocused(false); const n = parseFloat(draft.replace(/,/g, "")); if (!isNaN(n)) set(Math.min(Math.max(n, min), max)); else set(v); }}
-        className={`${w} border border-gray-300 rounded px-2 py-1 text-sm text-right focus:outline-none focus:border-blue-500`}
+        className={`${w} min-w-0 border border-gray-300 rounded px-2 py-1 text-sm text-right focus:outline-none focus:border-blue-500`}
       />
-      {unit && <span className="text-xs text-gray-400 w-14">{unit}</span>}
+      {unit && <span className="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">{unit}</span>}
     </div>
   );
 }
@@ -886,8 +886,8 @@ function SecHead({ n, title, sub }) {
 
 function Row({ label, hint, children }) {
   return (
-    <div className="flex items-center justify-between py-2 border-b border-gray-100 gap-2">
-      <div className="flex-1"><div className="text-sm font-medium text-gray-700">{label}</div>{hint && <div className="text-xs text-gray-400">{hint}</div>}</div>
+    <div className="flex items-center justify-between py-2 border-b border-gray-100 gap-2 min-w-0">
+      <div className="flex-1 min-w-0"><div className="text-sm font-medium text-gray-700 leading-tight">{label}</div>{hint && <div className="text-xs text-gray-400 leading-tight">{hint}</div>}</div>
       <div className="flex-shrink-0">{children}</div>
     </div>
   );
@@ -895,19 +895,19 @@ function Row({ label, hint, children }) {
 
 function KPI({ label, value, sub, hi }) {
   return (
-    <div className={`rounded-xl p-4 ${hi ? "bg-blue-600 text-white" : "bg-gray-50"}`}>
-      <div className={`text-xs mb-1 ${hi ? "text-blue-200" : "text-gray-500"}`}>{label}</div>
-      <div className="text-2xl font-bold">{value}</div>
-      {sub && <div className={`text-xs mt-1 ${hi ? "text-blue-200" : "text-gray-400"}`}>{sub}</div>}
+    <div className={`rounded-xl p-3 ${hi ? "bg-blue-600 text-white" : "bg-gray-50"}`}>
+      <div className={`text-xs mb-1 truncate ${hi ? "text-blue-200" : "text-gray-500"}`}>{label}</div>
+      <div className="text-lg font-bold leading-tight break-all">{value}</div>
+      {sub && <div className={`text-[11px] mt-1 leading-tight ${hi ? "text-blue-200" : "text-gray-400"}`}>{sub}</div>}
     </div>
   );
 }
 
 function CR({ label, value, col = "text-gray-600" }) {
   return (
-    <div className="flex justify-between py-1 border-b border-gray-100 text-xs">
-      <span className="text-gray-500">{label}</span>
-      <span className={`font-semibold ${col}`}>{value}</span>
+    <div className="flex justify-between py-1 border-b border-gray-100 text-xs gap-2 min-w-0">
+      <span className="text-gray-500 truncate">{label}</span>
+      <span className={`font-semibold whitespace-nowrap flex-shrink-0 ${col}`}>{value}</span>
     </div>
   );
 }
@@ -1731,13 +1731,13 @@ export default function App() {
                 <div className="text-gray-500 mb-1">{t.avgAnnualWage}</div>
                 <div className="flex items-center justify-center gap-0.5">
                   <span className="text-gray-400 text-xs">$</span>
-                  <Inp v={annWage} set={setAnnWage} min={1000} max={500000} step={1000} w="w-20" comma />
+                  <Inp v={annWage} set={setAnnWage} min={1000} max={500000} step={1000} w="w-24" comma />
                 </div>
               </div>
               <div className="bg-orange-50 rounded-lg p-2">
                 <div className="text-gray-500 mb-1">{t.wageInflation}</div>
                 <div className="flex items-center justify-center gap-0.5">
-                  <Inp v={infl} set={setInfl} min={0} max={30} step={0.1} w="w-10" />
+                  <Inp v={infl} set={setInfl} min={0} max={30} step={0.1} w="w-14" />
                   <span className="text-orange-600 font-bold text-xs">%</span>
                 </div>
               </div>
@@ -1745,10 +1745,11 @@ export default function App() {
           </div>
 
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div className="flex border-b border-gray-200">
+            <div className="flex border-b border-gray-200 overflow-x-auto">
               {t.tabs.map((lbl2, i) => (
                 <button key={t.tabIds[i]} onClick={() => setTab(t.tabIds[i])}
-                  className={`flex-1 text-xs py-2 font-medium transition-colors ${tab === t.tabIds[i] ? "bg-blue-600 text-white" : "text-gray-500 hover:bg-gray-50"}`}>
+                  title={lbl2}
+                  className={`flex-1 min-w-[60px] text-[10px] py-2 px-1 font-medium leading-tight transition-colors whitespace-nowrap ${tab === t.tabIds[i] ? "bg-blue-600 text-white" : "text-gray-500 hover:bg-gray-50"}`}>
                   {lbl2}
                 </button>
               ))}
@@ -2010,27 +2011,36 @@ export default function App() {
 
                 {/* HW 구성 */}
                 <div className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">{t.hwSection}</div>
-                <div className="space-y-1 mb-2">
-                  <div className="grid grid-cols-12 gap-1 text-xs text-gray-400 font-semibold px-1">
-                    <span className="col-span-3">{t.hwBrand}</span>
-                    <span className="col-span-4">{t.hwName}</span>
-                    <span className="col-span-3">{t.hwPriceLabel}</span>
-                    <span className="col-span-2 text-right">EA</span>
+                <div className="mb-2">
+                  {/* 헤더 */}
+                  <div className="flex items-center gap-1 text-[10px] text-gray-400 font-semibold mb-1 px-1">
+                    <span className="w-16 shrink-0">{t.hwBrand}</span>
+                    <span className="flex-1 min-w-0">{t.hwName}</span>
+                    <span className="w-20 shrink-0 text-right">{t.hwPriceLabel}</span>
+                    <span className="w-14 shrink-0 text-right">EA</span>
+                    <span className="w-4 shrink-0"/>
                   </div>
+                  {/* 데이터 행 */}
                   {hwConfig.map((hw) => (
-                    <div key={hw.id} className="grid grid-cols-12 gap-1 items-center">
-                      <input value={hw.brand} onChange={e => setHwConfig(hwConfig.map(h => h.id===hw.id ? {...h, brand:e.target.value} : h))}
-                        className="col-span-3 border border-gray-200 rounded px-1.5 py-1 text-xs focus:outline-none focus:border-blue-400" />
-                      <input value={hw.label} onChange={e => setHwConfig(hwConfig.map(h => h.id===hw.id ? {...h, label:e.target.value} : h))}
-                        className="col-span-4 border border-gray-200 rounded px-1.5 py-1 text-xs focus:outline-none focus:border-blue-400" />
-                      <Inp v={hw.price} set={v => setHwConfig(hwConfig.map(h => h.id===hw.id ? {...h, price:v} : h))}
-                        min={0} max={500000} step={100} w="w-full" />
-                      <div className="col-span-2 flex items-center justify-end gap-0.5">
+                    <div key={hw.id} className="flex items-center gap-1 py-1 border-b border-gray-100 last:border-0">
+                      <input value={hw.brand}
+                        onChange={e => setHwConfig(hwConfig.map(h => h.id===hw.id ? {...h, brand:e.target.value} : h))}
+                        className="w-16 shrink-0 border border-gray-200 rounded px-1.5 py-1 text-xs focus:outline-none focus:border-blue-400 min-w-0" />
+                      <input value={hw.label}
+                        onChange={e => setHwConfig(hwConfig.map(h => h.id===hw.id ? {...h, label:e.target.value} : h))}
+                        className="flex-1 min-w-0 border border-gray-200 rounded px-1.5 py-1 text-xs focus:outline-none focus:border-blue-400" />
+                      <div className="w-20 shrink-0">
+                        <Inp v={hw.price} set={v => setHwConfig(hwConfig.map(h => h.id===hw.id ? {...h, price:v} : h))}
+                          min={0} max={500000} step={100} w="w-20" comma />
+                      </div>
+                      <div className="w-14 shrink-0 flex items-center gap-0.5">
                         <Inp v={hwCounts[hw.id]||0} set={v => setHwCounts({...hwCounts,[hw.id]:v})} min={0} max={500} step={1} w="w-12" />
-                        {hw.id.startsWith("custom_") && (
+                      </div>
+                      <div className="w-4 shrink-0 text-center">
+                        {hw.id.startsWith("custom_") ? (
                           <button onClick={() => { setHwConfig(hwConfig.filter(h=>h.id!==hw.id)); const nc={...hwCounts}; delete nc[hw.id]; setHwCounts(nc); }}
-                            className="text-red-400 hover:text-red-600 text-xs ml-0.5 leading-none">{t.removeHw}</button>
-                        )}
+                            className="text-red-400 hover:text-red-600 text-xs leading-none">{t.removeHw}</button>
+                        ) : <span/>}
                       </div>
                     </div>
                   ))}
@@ -2131,7 +2141,7 @@ export default function App() {
 
           <div className="bg-white rounded-xl shadow-sm p-4">
             <div className="font-bold text-gray-700 mb-1 text-sm">{t.annualCostTitle}</div>
-            <div className="text-xs text-gray-400 mb-3">{t.annualCostSub.replace("{srRatio}", srRatio).replace("{capex}", $c(capex))}</div>
+            <div className="text-xs text-gray-400 mb-3">{t.annualCostSub.replace("{srRatio}", srRatio).replace("{capex}", $M(capex))}</div>
             <ResponsiveContainer width="100%" height={210}>
               <BarChart data={R.chart} margin={{ top:4, right:8, left:0, bottom:0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -2166,26 +2176,26 @@ export default function App() {
 
           <div className="bg-white rounded-xl shadow-sm p-4">
             <div className="font-bold text-gray-700 mb-3 text-sm">{t.tableTitle}</div>
-            <div className="overflow-auto">
-              <table className="w-full text-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-[11px]" style={{minWidth:"580px"}}>
                 <thead>
                   <tr className="bg-gray-50">
-                    {t.tableHeaders.map(h => <th key={h} className="text-right first:text-left p-2 font-semibold text-gray-600 whitespace-nowrap">{h}</th>)}
+                    {t.tableHeaders.map(h => <th key={h} className="text-right first:text-left px-2 py-1.5 font-semibold text-gray-600 whitespace-nowrap">{h}</th>)}
                   </tr>
                 </thead>
                 <tbody>
                   {R.chart.map((r, i) => (
                     <tr key={i} className={`border-t border-gray-100 ${r.savings > 0 ? "bg-green-50" : ""}`}>
-                      <td className="p-2 font-medium">{r.year}</td>
-                      <td className="p-2 text-right text-red-400">${c(r["Labor Baseline"])}</td>
-                      <td className="p-2 text-right text-orange-500">${c(r["Remaining Labor"])}</td>
-                      <td className="p-2 text-right text-blue-500">${c(r["SR OPEX"])}</td>
-                      <td className="p-2 text-right text-blue-300">${c(r["SR Depreciation"])}</td>
-                      <td className="p-2 text-right text-blue-800 font-semibold">${c(r["SR Total"])}</td>
-                      <td className={`p-2 text-right font-semibold ${r.savings > 0 ? "text-green-600" : "text-gray-400"}`}>
+                      <td className="px-2 py-1.5 font-medium">{r.year}</td>
+                      <td className="px-2 py-1.5 text-right text-red-400 whitespace-nowrap">${c(r["Labor Baseline"])}</td>
+                      <td className="px-2 py-1.5 text-right text-orange-500 whitespace-nowrap">${c(r["Remaining Labor"])}</td>
+                      <td className="px-2 py-1.5 text-right text-blue-500 whitespace-nowrap">${c(r["SR OPEX"])}</td>
+                      <td className="px-2 py-1.5 text-right text-blue-300 whitespace-nowrap">${c(r["SR Depreciation"])}</td>
+                      <td className="px-2 py-1.5 text-right text-blue-800 font-semibold whitespace-nowrap">${c(r["SR Total"])}</td>
+                      <td className={`px-2 py-1.5 text-right font-semibold whitespace-nowrap ${r.savings > 0 ? "text-green-600" : "text-gray-400"}`}>
                         {r.savings >= 0 ? `+$${c(r.savings)}` : `-$${c(Math.abs(r.savings))}`}
                       </td>
-                      <td className={`p-2 text-right ${r.savings > 0 ? "text-green-600" : "text-gray-400"}`}>
+                      <td className={`px-2 py-1.5 text-right whitespace-nowrap ${r.savings > 0 ? "text-green-600" : "text-gray-400"}`}>
                         {r.savings > 0 ? `${((r.savings / capex) * 100).toFixed(0)}%` : "—"}
                       </td>
                     </tr>
