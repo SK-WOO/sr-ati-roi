@@ -13,9 +13,20 @@ import autoTable from "jspdf-autotable";
 ChartJS.register(ArcElement, CTooltip, CLegend, CategoryScale, LinearScale, BarElement, Title, PointElement, LineElement, Filler, RadialLinearScale);
 
 // ── Version & Changelog ────────────────────────────────
-const VERSION = "v1.8.0";
+const VERSION = "v1.8.1";
 const BUILD_DATE = "2026-03-13";
 const CHANGELOG = [
+  {
+    version: "v1.8.1", date: "2026-03-13",
+    en: ["UI/visibility fixes: tab overflow, KPI text, CR layout, ROI table",
+         "i18n: all hardcoded strings replaced with T keys",
+         "Analytics: CAPEX doughnut NRE fix, Radar/CBar labels in Korean",
+         "New site diff defaults corrected (roadWidth consistency)"],
+    ko: ["UI/가시성 수정: 탭 오버플로, KPI 텍스트, CR 레이아웃, ROI 테이블",
+         "i18n: 하드코딩 문자열 전부 T 키로 교체",
+         "애널리틱스: CAPEX 도넛 NRE 수정, 레이더/막대차트 한국어 레이블",
+         "신규 사이트 난이도 기본값 일관성 수정"],
+  },
   {
     version: "v1.8.0", date: "2026-03-13",
     en: ["Editable Hardware Configuration (prices, names, brands, custom items)",
@@ -2020,7 +2031,7 @@ export default function App() {
                   );
                 })}
                 <button onClick={() => setSites([...sites, {id:Date.now(), name:`Site ${sites.length+1}`, type:"area", pathLen:0, width:40, height:35,
-                  diff:{outdoor:0,elevation:0,roadWidth:0,surface:0,complexity:0.1,paved:0,capacity:0.1}}])}
+                  diff:{outdoor:0,elevation:0,roadWidth:0.1,surface:0,complexity:0.1,paved:0,capacity:0.1}}])}
                   className="w-full border border-dashed border-blue-300 text-blue-500 text-xs py-2 rounded-lg hover:bg-blue-50 mb-3">{t.addSite}</button>
 
                 {/* HW 구성 */}
