@@ -5,9 +5,20 @@ import {
 } from "recharts";
 
 // ── Version & Changelog ────────────────────────────────
-const VERSION = "v1.5.0";
+const VERSION = "v1.6.0";
 const BUILD_DATE = "2026-03-13";
 const CHANGELOG = [
+  {
+    version: "v1.6.0", date: "2026-03-13",
+    en: ["Preset storage migrated to Google Sheets (team-shared)",
+         "Auto-load presets from Sheets on login",
+         "🔄 Refresh button in preset panel",
+         "Offline fallback to localStorage if Sheets unavailable"],
+    ko: ["프리셋 저장소를 Google Sheets로 전환 (팀 공유)",
+         "로그인 시 Sheets에서 자동 로드",
+         "프리셋 패널에 🔄 새로고침 버튼 추가",
+         "Sheets 연결 불가 시 로컬 저장소로 폴백"],
+  },
   {
     version: "v1.5.0", date: "2026-03-13",
     en: ["Added version badge & changelog modal to header",
@@ -67,10 +78,15 @@ const CHANGELOG = [
 // ── Google Auth ────────────────────────────────────────
 const CLIENT_ID = "318386102464-2bavuh812hpk4gsegb5tkvrsnhartsm9.apps.googleusercontent.com";
 const ALLOWED_DOMAIN = "seoulrobotics.org";
+const SHEET_ID = "1drJd-Ete7ANEzhNliihFboZ4v8d4jngD9U_fTAjy71s";
+const SHEET_NAME = "Presets";
+const SHEETS_SCOPE = "https://www.googleapis.com/auth/spreadsheets";
 
 function useGoogleAuth() {
   const [user, setUser] = useState(null);
   const [ready, setReady] = useState(false);
+  const [accessToken, setAccessToken] = useState(null);
+  const tokenClientRef = useRef(null);
 
   useEffect(() => {
     const script = document.createElement("script");
@@ -85,7 +101,15 @@ function useGoogleAuth() {
             const p = JSON.parse(atob(res.credential.split(".")[1]));
             if (!p.email?.endsWith(`@${ALLOWED_DOMAIN}`)) return;
             setUser({ name: p.name, email: p.email, picture: p.picture });
+            tokenClientRef.current?.requestAccessToken({ prompt: "" });
           } catch {}
+        },
+      });
+      tokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SHEETS_SCOPE,
+        callback: (tokenResponse) => {
+          if (tokenResponse.access_token) setAccessToken(tokenResponse.access_token);
         },
       });
       setReady(true);
@@ -94,11 +118,12 @@ function useGoogleAuth() {
     return () => document.head.removeChild(script);
   }, []);
 
-   const logout = () => {
+  const logout = () => {
     if (window.google) window.google.accounts.id.disableAutoSelect();
     setUser(null);
+    setAccessToken(null);
   };
-  return { user, ready, logout };
+  return { user, ready, logout, accessToken };
 }
 
 function LoginScreen({ ready }) {
@@ -578,6 +603,87 @@ const T = {
 const STORAGE_KEY = "sr-ati-presets-v4";
 function loadPresets() { try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : []; } catch { return []; } }
 function saveToStorage(list) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); return true; } catch { return false; } }
+
+// ── Google Sheets helpers ───────────────────────────────
+const SHEETS_BASE = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}`;
+const sheetsHeaders = ["id","brand","country","plant","author","dept","note","savedAt","params"];
+
+async function sheetsLoad(token) {
+  const res = await fetch(`${SHEETS_BASE}/values/${SHEET_NAME}!A:I`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error("Sheets read failed");
+  const data = await res.json();
+  const rows = data.values || [];
+  // 첫 행이 헤더가 아니면 초기화
+  if (rows.length === 0 || rows[0][0] !== "id") {
+    await sheetsInitHeader(token);
+    return [];
+  }
+  return rows.slice(1).map((row, i) => {
+    try {
+      return { _rowIndex: i + 2, id: row[0], brand: row[1], country: row[2],
+        plant: row[3], author: row[4] || "", dept: row[5] || "",
+        note: row[6] || "", savedAt: row[7], params: JSON.parse(row[8] || "{}") };
+    } catch { return null; }
+  }).filter(Boolean);
+}
+
+async function sheetsInitHeader(token) {
+  await fetch(`${SHEETS_BASE}/values/${SHEET_NAME}!A1:I1?valueInputOption=RAW`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ values: [sheetsHeaders] }),
+  });
+}
+
+function presetToRow(preset) {
+  return [
+    preset.id || String(Date.now()),
+    preset.brand, preset.country, preset.plant,
+    preset.author || "", preset.dept || "", preset.note || "",
+    preset.savedAt, JSON.stringify(preset.params),
+  ];
+}
+
+async function sheetsAppend(token, preset) {
+  const res = await fetch(
+    `${SHEETS_BASE}/values/${SHEET_NAME}!A:I:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ values: [presetToRow(preset)] }),
+    }
+  );
+  if (!res.ok) throw new Error("Sheets append failed");
+}
+
+async function sheetsUpdateRow(token, rowIndex, preset) {
+  const res = await fetch(
+    `${SHEETS_BASE}/values/${SHEET_NAME}!A${rowIndex}:I${rowIndex}?valueInputOption=RAW`,
+    {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ values: [presetToRow(preset)] }),
+    }
+  );
+  if (!res.ok) throw new Error("Sheets update failed");
+}
+
+async function sheetsDeleteRow(token, rowIndex) {
+  const res = await fetch(`${SHEETS_BASE}:batchUpdate`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      requests: [{ deleteDimension: {
+        range: { sheetId: 0, dimension: "ROWS",
+          startIndex: rowIndex - 1, endIndex: rowIndex },
+      }}],
+    }),
+  });
+  if (!res.ok) throw new Error("Sheets delete failed");
+}
+
 const clamp = (v, min, max, fallback) => { const n = Number(v); return (isNaN(n) || !isFinite(n)) ? fallback : Math.min(Math.max(n, min), max); };
 
 const COUNTRIES = {
@@ -702,7 +808,7 @@ function PresetModal({ params, onSave, onClose, t }) {
   );
 }
 
-function PresetPanel({ presets, onLoad, onDelete, onClose, t }) {
+function PresetPanel({ presets, onLoad, onDelete, onClose, t, sheetsLoading, onRefresh }) {
   const [search, setSearch] = useState("");
   const filtered = presets.filter(p => [p.brand, p.country, p.plant].join(" ").toLowerCase().includes(search.toLowerCase()));
   const grouped = filtered.reduce((acc, p) => {
@@ -714,8 +820,14 @@ function PresetPanel({ presets, onLoad, onDelete, onClose, t }) {
     <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl shadow-xl w-96 max-h-[80vh] flex flex-col">
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-          <div className="font-bold text-gray-800">{t.factoryPresets}</div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
+          <div className="flex items-center gap-2">
+            <div className="font-bold text-gray-800">{t.factoryPresets}</div>
+            <span className="text-xs text-green-600 font-semibold">☁ Google Sheets</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={onRefresh} disabled={sheetsLoading} className="text-xs text-blue-500 hover:text-blue-700 disabled:opacity-40">{sheetsLoading ? "⏳" : "🔄"}</button>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
+          </div>
         </div>
         <div className="px-4 pt-3">
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t.searchPh}
@@ -739,7 +851,7 @@ function PresetPanel({ presets, onLoad, onDelete, onClose, t }) {
                       </div>
                       <div className="flex flex-col gap-1">
                         <button onClick={() => onLoad(p)} className="text-xs bg-blue-600 text-white px-2 py-1 rounded-lg hover:bg-blue-700 whitespace-nowrap">{t.load}</button>
-                        <button onClick={() => onDelete(p._idx)} className="text-xs border border-red-200 text-red-500 px-2 py-1 rounded-lg hover:bg-red-50 whitespace-nowrap">{t.delete}</button>
+                        <button onClick={() => onDelete(p)} className="text-xs border border-red-200 text-red-500 px-2 py-1 rounded-lg hover:bg-red-50 whitespace-nowrap">{t.delete}</button>
                       </div>
                     </div>
                   </div>
@@ -788,21 +900,67 @@ function ChangelogModal({ onClose, lang }) {
 
 export default function App() {
   // ── Google Auth ──
-  const { user: googleUser, ready: gsiReady, logout: googleLogout } = useGoogleAuth();
+  const { user: googleUser, ready: gsiReady, logout: googleLogout, accessToken } = useGoogleAuth();
 
   const [lang, setLang] = useState("en");
   const t = T[lang];
 
   const [presets, setPresets] = useState(() => loadPresets());
+  const [sheetsLoading, setSheetsLoading] = useState(false);
   const [showSave, setShowSave] = useState(false);
   const [showList, setShowList] = useState(false);
   const [loadedName, setLoadedName] = useState(null);
-  const [loadedIdx, setLoadedIdx] = useState(null);
+  const [loadedRowIndex, setLoadedRowIndex] = useState(null);
   const [toast, setToast] = useState(null);
   const [showChangelog, setShowChangelog] = useState(false);
 
   const showToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 2500); };
-  const savePresets = (list) => { setPresets(list); if (!saveToStorage(list)) showToast(t.storageFail, false); };
+
+  // Sheets 연동: accessToken 확보되면 로드
+  useEffect(() => {
+    if (!accessToken) return;
+    setSheetsLoading(true);
+    sheetsLoad(accessToken)
+      .then(list => { setPresets(list); saveToStorage(list); })
+      .catch(() => showToast("Sheets 로드 실패 — 로컬 데이터 사용", false))
+      .finally(() => setSheetsLoading(false));
+  }, [accessToken]);
+
+  const reloadFromSheets = async () => {
+    if (!accessToken) return;
+    setSheetsLoading(true);
+    try { const list = await sheetsLoad(accessToken); setPresets(list); saveToStorage(list); }
+    catch { showToast("Sheets 새로고침 실패", false); }
+    finally { setSheetsLoading(false); }
+  };
+
+  const handleSavePreset = async (p) => {
+    const newPreset = { ...p, id: String(Date.now()) };
+    if (accessToken) {
+      try {
+        await sheetsAppend(accessToken, newPreset);
+        await reloadFromSheets();
+      } catch { showToast(t.storageFail, false); return; }
+    } else {
+      const next = [...presets, newPreset];
+      setPresets(next); saveToStorage(next);
+    }
+    setShowSave(false);
+    setLoadedName(`${p.brand} · ${p.country} · ${p.plant}`);
+    showToast(t.presetSaved);
+  };
+
+  const handleDeletePreset = async (preset) => {
+    if (accessToken && preset._rowIndex) {
+      try {
+        await sheetsDeleteRow(accessToken, preset._rowIndex);
+        await reloadFromSheets();
+      } catch { showToast(t.storageFail, false); }
+    } else {
+      const next = presets.filter(p => p !== preset);
+      setPresets(next); saveToStorage(next);
+    }
+  };
 
   const [cKey, setCKey] = useState("US");
   const [regDays, setRegDays] = useState(250);
@@ -924,7 +1082,7 @@ export default function App() {
     setOpexDiscount1(clamp(p.opexDiscount1 ?? 30, 0, 80, 30));
     setOpexDiscountStep(clamp(p.opexDiscountStep ?? 3, 0, 20, 3));
     setLoadedName(`${preset.brand} · ${preset.country} · ${preset.plant}`);
-    setLoadedIdx(preset._idx);
+    setLoadedRowIndex(preset._rowIndex ?? null);
     setShowList(false);
   };
 
@@ -933,11 +1091,20 @@ export default function App() {
     setCKey(key); setAnnWage(co.avgWage); setSrch(co.surcharge); setInfl(co.inflation); setHolDays(co.holidays);
   };
 
-  const handleUpdatePreset = () => {
-    if (loadedIdx === null || loadedIdx < 0) { showToast(t.noPresetLoaded, false); return; }
-    const updated = [...presets];
-    updated[loadedIdx] = { ...updated[loadedIdx], params: currentParams(), savedAt: new Date().toISOString() };
-    savePresets(updated);
+  const handleUpdatePreset = async () => {
+    if (!loadedRowIndex) { showToast(t.noPresetLoaded, false); return; }
+    const existing = presets.find(p => p._rowIndex === loadedRowIndex);
+    if (!existing) { showToast(t.noPresetLoaded, false); return; }
+    const updated = { ...existing, params: currentParams(), savedAt: new Date().toISOString() };
+    if (accessToken) {
+      try {
+        await sheetsUpdateRow(accessToken, loadedRowIndex, updated);
+        await reloadFromSheets();
+      } catch { showToast(t.storageFail, false); return; }
+    } else {
+      const next = presets.map(p => p._rowIndex === loadedRowIndex ? updated : p);
+      setPresets(next); saveToStorage(next);
+    }
     showToast(t.updated(loadedName));
   };
 
@@ -1056,22 +1223,17 @@ export default function App() {
       )}
       {showSave && (
         <PresetModal params={currentParams()} t={t}
-          onSave={p => {
-            const next = [...presets, p];
-            savePresets(next);
-            setShowSave(false);
-            setLoadedName(`${p.brand} · ${p.country} · ${p.plant}`);
-            setLoadedIdx(next.length - 1);
-            showToast(t.presetSaved);
-          }}
+          onSave={handleSavePreset}
           onClose={() => setShowSave(false)}
         />
       )}
       {showList && (
         <PresetPanel presets={presets} t={t}
           onLoad={loadPreset}
-          onDelete={idx => savePresets(presets.filter((_, i) => i !== idx))}
+          onDelete={handleDeletePreset}
           onClose={() => setShowList(false)}
+          sheetsLoading={sheetsLoading}
+          onRefresh={reloadFromSheets}
         />
       )}
       {showChangelog && <ChangelogModal onClose={() => setShowChangelog(false)} lang={lang} />}
@@ -1107,7 +1269,7 @@ export default function App() {
               <button onClick={() => setLang("ko")} className={`px-3 py-1.5 text-xs font-bold transition-colors ${lang === "ko" ? "bg-white text-blue-700" : "text-blue-200 hover:bg-blue-600"}`}>한국어</button>
             </div>
             <button onClick={() => setShowList(true)} className="flex items-center gap-1.5 bg-blue-800 hover:bg-blue-900 text-white text-xs px-3 py-1.5 rounded-lg transition-colors">
-              🏭 {t.presets} {presets.length > 0 && <span className="bg-blue-500 text-white text-xs rounded-full px-1.5">{presets.length}</span>}
+              {sheetsLoading ? "⏳" : "🏭"} {t.presets} {presets.length > 0 && <span className="bg-blue-500 text-white text-xs rounded-full px-1.5">{presets.length}</span>}
             </button>
             <button onClick={() => setShowSave(true)} className="flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white text-xs px-3 py-1.5 rounded-lg transition-colors">
               💾 {t.savePreset}
@@ -1126,7 +1288,7 @@ export default function App() {
               <span className="text-blue-300">{t.loaded}</span>
               <span className="text-white font-semibold">{loadedName}</span>
               <button onClick={handleUpdatePreset} className="bg-green-500 hover:bg-green-600 text-white text-xs px-2 py-0.5 rounded ml-1">{t.update}</button>
-              <button onClick={() => { setLoadedName(null); setLoadedIdx(null); }} className="text-blue-400 hover:text-white ml-1">✕</button>
+              <button onClick={() => { setLoadedName(null); setLoadedRowIndex(null); }} className="text-blue-400 hover:text-white ml-1">✕</button>
             </div>
           </div>
         )}
