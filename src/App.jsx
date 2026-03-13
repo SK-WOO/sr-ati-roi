@@ -6,7 +6,7 @@ import {
 
 // ── Google Auth ────────────────────────────────────────
 const CLIENT_ID = "318386102464-2bavuh812hpk4gsegb5tkvrsnhartsm9.apps.googleusercontent.com";
-const ALLOWED_DOMAIN = "seoulrobotics.com";
+const ALLOWED_DOMAIN = "seoulrobotics.org";
 
 function useGoogleAuth() {
   const [user, setUser] = useState(null);
