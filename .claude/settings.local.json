@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(python -c \"import openpyxl; print\\('ok'\\)\" 2>&1 || pip install openpyxl -q)",
+      "Bash(pip install:*)",
+      "Bash(python -c \"\nimport openpyxl\nwb = openpyxl.load_workbook\\(r'C:\\\\Users\\\\Sangkil\\\\10.업무\\\\2.Operation\\\\[Work in Progress] Nissan Pricing_260130.xlsx', data_only=True\\)\nprint\\('Sheets:', wb.sheetnames\\)\n\")",
+      "Bash(python -c \"\nimport openpyxl\nwb = openpyxl.load_workbook\\(r'C:\\\\Users\\\\Sangkil\\\\10.업무\\\\2.Operation\\\\[Work in Progress] Nissan Pricing_260130.xlsx', data_only=True\\)\n\nfor sheet_name in wb.sheetnames:\n    ws = wb[sheet_name]\n    print\\(f'\\\\n========== [{sheet_name}] \\(rows:{ws.max_row}, cols:{ws.max_column}\\) =========='\\)\n    for row in ws.iter_rows\\(min_row=1, max_row=ws.max_row, values_only=True\\):\n        if any\\(cell is not None for cell in row\\):\n            print\\(row\\)\n\")",
+      "Bash(python -c \"\nimport openpyxl\nwb = openpyxl.load_workbook\\(r'C:\\\\Users\\\\Sangkil\\\\10.업무\\\\2.Operation\\\\[Work in Progress] Nissan Pricing_260130.xlsx', data_only=True\\)\n\nws = wb['Master']\nprint\\('=== Master Sheet 120~300 ==='\\)\nfor row in ws.iter_rows\\(min_row=120, max_row=300, values_only=True\\):\n    if any\\(cell is not None for cell in row\\):\n        cleaned = [c for c in row if c is not None]\n        print\\(cleaned\\)\n\")",
+      "Bash(python -c \"\nimport openpyxl\nwb = openpyxl.load_workbook\\(r'C:\\\\Users\\\\Sangkil\\\\10.업무\\\\2.Operation\\\\[Work in Progress] Nissan Pricing_260130.xlsx', data_only=True\\)\n\nws = wb['Master']\nprint\\('=== Master Sheet 300~500 ==='\\)\nfor row in ws.iter_rows\\(min_row=300, max_row=500, values_only=True\\):\n    if any\\(cell is not None for cell in row\\):\n        cleaned = [c for c in row if c is not None]\n        print\\(cleaned\\)\n\")",
+      "Bash(python -c \"\nimport openpyxl\nwb = openpyxl.load_workbook\\(r'C:\\\\Users\\\\Sangkil\\\\10.업무\\\\2.Operation\\\\[Work in Progress] Nissan Pricing_260130.xlsx', data_only=True\\)\n\nws = wb['Dingolfing > Kyushu']\nprint\\('=== Dingolfing > Kyushu ==='\\)\nfor row in ws.iter_rows\\(min_row=1, max_row=150, values_only=True\\):\n    if any\\(cell is not None for cell in row\\):\n        cleaned = [c for c in row if c is not None]\n        print\\(cleaned\\)\n\")",
+      "Bash(cd \"C:\\\\Users\\\\Sangkil\\\\sr-ati-roi\" && npm run build 2>&1)",
+      "Bash(npm run:*)",
+      "Bash(gh run:*)",
+      "Bash(npm install:*)"
+    ]
+  }
+}

@@ -1,13 +1,32 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import {
   BarChart, Bar, LineChart, Line,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area
 } from "recharts";
+import {
+  Chart as ChartJS, ArcElement, Tooltip as CTooltip, Legend as CLegend,
+  CategoryScale, LinearScale, BarElement, Title, PointElement, LineElement, Filler, RadialLinearScale
+} from "chart.js";
+import { Doughnut, Bar as CBar, Radar } from "react-chartjs-2";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+ChartJS.register(ArcElement, CTooltip, CLegend, CategoryScale, LinearScale, BarElement, Title, PointElement, LineElement, Filler, RadialLinearScale);
 
 // ── Version & Changelog ────────────────────────────────
-const VERSION = "v1.7.0";
+const VERSION = "v1.8.0";
 const BUILD_DATE = "2026-03-13";
 const CHANGELOG = [
+  {
+    version: "v1.8.0", date: "2026-03-13",
+    en: ["Editable Hardware Configuration (prices, names, brands, custom items)",
+         "Hardware Config Presets (save/load)",
+         "PDF Report export (author, version, date, full summary)",
+         "Analytics upgrade: Doughnut/Radar/Area charts via Chart.js"],
+    ko: ["하드웨어 구성 편집 가능 (가격, 이름, 브랜드, 커스텀 추가)",
+         "하드웨어 구성 프리셋 저장/불러오기",
+         "PDF 리포트 내보내기 (작성자, 버전, 날짜, 전체 요약)",
+         "애널리틱스 강화: Chart.js Doughnut/Radar/Area 차트 추가"],
+  },
   {
     version: "v1.7.0", date: "2026-03-13",
     en: ["Added 🧮 Pricing Calc tab (5th tab)",
@@ -430,6 +449,29 @@ const T = {
     swLicenseCalc: "SW License",
     overhaulCalc: "Overhaul (ann.)",
     opexDirectCalc: "OPEX Direct",
+    // HW Config
+    hwBrand: "Brand", hwName: "Model", hwPriceLabel: "Unit Price ($)",
+    addHwItem: "+ Add Custom HW", removeHw: "✕",
+    resetHwDefault: "Reset to Default",
+    hwPresetSection: "💾 HW Config Presets",
+    saveHwPreset: "Save Config", hwPresetNamePh: "Config name (e.g. Nissan Line-1)",
+    loadHwConfig: "Load", deleteHwConfig: "Delete",
+    noHwPresets: "No HW configs saved.",
+    // Analytics
+    analyticsTitle: "📐 Analytics Deep Dive",
+    capexPieTitle: "CAPEX Breakdown",
+    costPieTitle: "Annual Cost Mix (Yr 1)",
+    savingsRadarTitle: "ROI Radar",
+    // Report
+    reportBtn: "📄 Report",
+    reportTitle: "SR ATI ROI Report",
+    reportAuthorPh: "Author name",
+    reportClientPh: "Client / OEM",
+    reportProjectPh: "Project / Plant",
+    reportNotesPh: "Additional notes (optional)",
+    downloadPdf: "⬇ Download PDF",
+    reportClose: "Close",
+    reportSection: "📄 Export Report",
   },
   ko: {
     title: "SR ATI ROI 계산기",
@@ -670,6 +712,29 @@ const T = {
     swLicenseCalc: "SW 라이센스",
     overhaulCalc: "오버홀 (연간)",
     opexDirectCalc: "직접 OPEX",
+    // HW Config
+    hwBrand: "브랜드", hwName: "모델명", hwPriceLabel: "단가 ($)",
+    addHwItem: "+ 커스텀 HW 추가", removeHw: "✕",
+    resetHwDefault: "기본값 초기화",
+    hwPresetSection: "💾 HW 구성 프리셋",
+    saveHwPreset: "구성 저장", hwPresetNamePh: "구성 이름 (예: Nissan Line-1)",
+    loadHwConfig: "불러오기", deleteHwConfig: "삭제",
+    noHwPresets: "저장된 HW 구성 없음.",
+    // Analytics
+    analyticsTitle: "📐 심화 분석",
+    capexPieTitle: "CAPEX 구성 비율",
+    costPieTitle: "연간 비용 구성 (1년차)",
+    savingsRadarTitle: "ROI 레이더",
+    // Report
+    reportBtn: "📄 리포트",
+    reportTitle: "SR ATI ROI 리포트",
+    reportAuthorPh: "작성자 이름",
+    reportClientPh: "고객 / OEM",
+    reportProjectPh: "프로젝트 / 공장",
+    reportNotesPh: "추가 메모 (선택)",
+    downloadPdf: "⬇ PDF 다운로드",
+    reportClose: "닫기",
+    reportSection: "📄 리포트 내보내기",
   }
 };
 
@@ -759,14 +824,17 @@ async function sheetsDeleteRow(token, rowIndex) {
 
 const clamp = (v, min, max, fallback) => { const n = Number(v); return (isNaN(n) || !isFinite(n)) ? fallback : Math.min(Math.max(n, min), max); };
 
-const HW_PRICES = {
-  xt32:  { label: "Lidar XT32",  price: 4500  },
-  ot128: { label: "Lidar OT128", price: 12600 },
-  qt128: { label: "Lidar QT128", price: 5000  },
-  zt128: { label: "Lidar ZT128", price: 1620  },
-  server:{ label: "Server",      price: 27000 },
-  etc:   { label: "Accessories", price: 1000  },
-};
+const DEFAULT_HW_CONFIG = [
+  { id: "xt32",   brand: "Hesai", label: "Lidar XT32",   price: 4500  },
+  { id: "ot128",  brand: "Hesai", label: "Lidar OT128",  price: 12600 },
+  { id: "qt128",  brand: "Hesai", label: "Lidar QT128",  price: 5000  },
+  { id: "zt128",  brand: "Hesai", label: "Lidar ZT128",  price: 1620  },
+  { id: "server", brand: "SR",    label: "Server",       price: 27000 },
+  { id: "etc",    brand: "SR",    label: "Accessories",  price: 1000  },
+];
+const HW_PRESET_KEY = "sr-hw-presets-v1";
+function loadHwPresets() { try { const r = localStorage.getItem(HW_PRESET_KEY); return r ? JSON.parse(r) : []; } catch { return []; } }
+function saveHwPresets(list) { try { localStorage.setItem(HW_PRESET_KEY, JSON.stringify(list)); } catch {} }
 const NRE_UNIT = { length: 575, area: 11500 };
 const NRE_BASE = { length: 5,   area: 100   };
 const DEV_LICENSE_AMT = 84000;
@@ -983,6 +1051,188 @@ function ChangelogModal({ onClose, lang }) {
   );
 }
 
+function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexInst, capexOther,
+  capexBase, capexAfterOverhead, capexAfterMargin, capexOverhead, capexMargin, capexDiscount,
+  opexMode, opexArea, life, projYrs, loadedName, googleUser }) {
+  const [author, setAuthor] = useState(googleUser?.name || "");
+  const [client, setClient] = useState("");
+  const [project, setProject] = useState(loadedName || "");
+  const [notes, setNotes] = useState("");
+
+  const generatePdf = () => {
+    const doc = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
+    const now = new Date();
+    const dateStr = now.toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
+    const timeStr = now.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
+    const W = 210, M = 14;
+
+    // Header bar
+    doc.setFillColor(37,99,235);
+    doc.rect(0,0,W,22,"F");
+    doc.setTextColor(255,255,255);
+    doc.setFont("helvetica","bold");
+    doc.setFontSize(14);
+    doc.text("SR ATI ROI Calculator", M, 10);
+    doc.setFontSize(8);
+    doc.setFont("helvetica","normal");
+    doc.text(`${VERSION}  ·  ${dateStr}  ${timeStr}`, M, 16);
+    doc.text("SEOULROBOTICS", W - M, 10, {align:"right"});
+    doc.text("Autonomy Through Infrastructure", W - M, 16, {align:"right"});
+
+    let y = 30;
+    doc.setTextColor(30,30,30);
+
+    // Project info
+    doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(37,99,235);
+    doc.text("Project Information", M, y); y += 6;
+    doc.setDrawColor(37,99,235); doc.setLineWidth(0.3); doc.line(M, y, W-M, y); y += 4;
+    autoTable(doc, { startY: y, margin:{left:M,right:M}, theme:"plain",
+      styles:{fontSize:9,cellPadding:1.5},
+      columnStyles:{0:{fontStyle:"bold",textColor:[100,100,100],cellWidth:45},1:{textColor:[30,30,30]}},
+      body:[
+        ["Author", author || "—"],
+        ["Client / OEM", client || "—"],
+        ["Project / Plant", project || "—"],
+        ...(notes ? [["Notes", notes]] : []),
+      ],
+    });
+    y = doc.lastAutoTable.finalY + 8;
+
+    // Production & Transport KPIs
+    doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(37,99,235);
+    doc.text("Production & Workforce", M, y); y += 6;
+    doc.setDrawColor(37,99,235); doc.line(M, y, W-M, y); y += 4;
+    autoTable(doc, { startY: y, margin:{left:M,right:M}, theme:"striped",
+      headStyles:{fillColor:[37,99,235],fontSize:8,textColor:255},
+      styles:{fontSize:9,cellPadding:2},
+      head:[["Metric","Value","Metric","Value"]],
+      body:[
+        ["Cycle Time", `${R.cycleT.toFixed(1)} min`, "Back-calc UPH", `${R.uph.toFixed(1)} /hr`],
+        ["SR Drivers (total)", String(R.drvTot), "Manned Drivers", String(R.mannedDrvTot)],
+        ["Ann. Labor Baseline", `$${c(R.annLaborBaseline)}`, "Ann. Remaining Labor", `$${c(R.annLaborRemaining)}`],
+        ["Cost / Person", `$${c(R.compPP)}`, "Effective Hourly", `$${R.effHrly.toFixed(2)}/hr`],
+      ],
+    });
+    y = doc.lastAutoTable.finalY + 8;
+
+    // CAPEX
+    doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(37,99,235);
+    doc.text("CAPEX Breakdown", M, y); y += 6;
+    doc.setDrawColor(37,99,235); doc.line(M, y, W-M, y); y += 4;
+    autoTable(doc, { startY: y, margin:{left:M,right:M}, theme:"striped",
+      headStyles:{fillColor:[37,99,235],fontSize:8,textColor:255},
+      styles:{fontSize:9,cellPadding:2},
+      head:[["Item","Amount"]],
+      body:[
+        ["Hardware (HW)", `$${c(capexHW)}`],
+        ["NRE", `$${c(capexNRE)}`],
+        ["Installation / Integration", `$${c(capexInst)}`],
+        ["Other", `$${c(capexOther)}`],
+        ["Subtotal", `$${c(capexBase)}`],
+        [`Overhead (+${capexOverhead}%)`, `$${c(capexBase * capexOverhead/100)}`],
+        [`Margin (+${capexMargin}%)`, `$${c(capexAfterOverhead * capexMargin/100)}`],
+        [`First Plant Discount (-${capexDiscount}%)`, `-$${c(capexAfterMargin * capexDiscount/100)}`],
+        ["TOTAL CAPEX", `$${c(capex)}`],
+      ],
+      columnStyles:{0:{cellWidth:110},1:{halign:"right",fontStyle:"bold"}},
+      didParseCell: (data) => { if (data.row.index === 8) { data.cell.styles.fillColor=[219,234,254]; data.cell.styles.fontStyle="bold"; data.cell.styles.fontSize=10; } },
+    });
+    y = doc.lastAutoTable.finalY + 8;
+
+    // OPEX & ROI summary
+    doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(37,99,235);
+    doc.text("OPEX & ROI Summary", M, y); y += 6;
+    doc.setDrawColor(37,99,235); doc.line(M, y, W-M, y); y += 4;
+    autoTable(doc, { startY: y, margin:{left:M,right:M}, theme:"striped",
+      headStyles:{fillColor:[37,99,235],fontSize:8,textColor:255},
+      styles:{fontSize:9,cellPadding:2},
+      head:[["Metric","Value","Metric","Value"]],
+      body:[
+        ["Ann. Depreciation", `$${c(R.annDepr)}`, "Ann. OPEX", `$${c(R.annOpex)}`],
+        ["Ann. SR Total", `$${c(R.annSRTot)}`, "Yr 1 Savings", `$${c(R.yr1Savings)}`],
+        ["Break-Even", R.bep, `${projYrs}-yr Net Savings`, `$${c(R.finSav)}`],
+        ["Total ROI", R.finSav > 0 ? `${c(R.roiPct,0)}%` : "—", "Useful Life", `${life} yrs`],
+      ],
+    });
+    y = doc.lastAutoTable.finalY + 8;
+
+    // Year-by-year table
+    if (y > 220) { doc.addPage(); y = 14; }
+    doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(37,99,235);
+    doc.text("Year-by-Year ROI", M, y); y += 6;
+    doc.setDrawColor(37,99,235); doc.line(M, y, W-M, y); y += 4;
+    autoTable(doc, { startY: y, margin:{left:M,right:M}, theme:"striped",
+      headStyles:{fillColor:[37,99,235],fontSize:8,textColor:255},
+      styles:{fontSize:8,cellPadding:1.5},
+      head:[["Year","Labor Base","Rem. Labor","SR OPEX","SR Depr.","SR Total","Cum. Savings","ROI"]],
+      body: R.chart.map(r => [
+        r.year, `$${c(r["Labor Baseline"])}`, `$${c(r["Remaining Labor"])}`,
+        `$${c(r["SR OPEX"])}`, `$${c(r["SR Depreciation"])}`, `$${c(r["SR Total"])}`,
+        r.savings >= 0 ? `+$${c(r.savings)}` : `-$${c(Math.abs(r.savings))}`,
+        r.savings > 0 ? `${((r.savings/capex)*100).toFixed(0)}%` : "—",
+      ]),
+      didParseCell: (data) => { if (data.section==="body" && parseFloat(R.chart[data.row.index]?.savings)>0) data.cell.styles.fillColor=[236,253,245]; },
+      columnStyles:{0:{cellWidth:12},7:{halign:"right"}},
+    });
+
+    // Footer
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i=1; i<=pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(7); doc.setTextColor(150,150,150);
+      doc.text(`SR ATI ROI Calculator ${VERSION}  ·  Confidential`, M, 292);
+      doc.text(`Page ${i} / ${pageCount}`, W-M, 292, {align:"right"});
+    }
+    const fileName = `SR-ROI-Report_${(client||project||"export").replace(/[^a-zA-Z0-9]/g,"_")}_${now.toISOString().slice(0,10)}.pdf`;
+    doc.save(fileName);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl shadow-xl w-[480px] max-h-[85vh] flex flex-col">
+        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+          <div>
+            <div className="font-bold text-gray-800">{t.reportSection}</div>
+            <div className="text-xs text-gray-400 mt-0.5">{VERSION} · {BUILD_DATE}</div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
+        </div>
+        <div className="overflow-auto flex-1 p-4 space-y-3">
+          <div className="bg-blue-50 rounded-lg p-3 text-xs text-blue-700">
+            {lang==="ko" ? "아래 정보를 입력하면 PDF에 포함됩니다. 현재 모든 계산 결과가 자동으로 포함됩니다." : "Fill in the info below — all current calculation results are automatically included."}
+          </div>
+          {[
+            [t.name, author, setAuthor, t.reportAuthorPh],
+            [t.brandOEM, client, setClient, t.reportClientPh],
+            [t.plant, project, setProject, t.reportProjectPh],
+          ].map(([lbl,val,set,ph]) => (
+            <div key={lbl}>
+              <div className="text-xs text-gray-500 mb-1 font-medium">{lbl}</div>
+              <input value={val} onChange={e=>set(e.target.value)} placeholder={ph}
+                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500"/>
+            </div>
+          ))}
+          <div>
+            <div className="text-xs text-gray-500 mb-1 font-medium">{t.notes}</div>
+            <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={2} placeholder={t.reportNotesPh}
+              className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500 resize-none"/>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-3 text-xs space-y-1">
+            <div className="font-semibold text-gray-600 mb-1">{lang==="ko" ? "포함 내용" : "Report Contents"}</div>
+            {["Project Info","Production & Workforce KPIs","CAPEX Breakdown","OPEX & ROI Summary",`${projYrs}-Year ROI Table`].map(s=>(
+              <div key={s} className="flex items-center gap-1.5 text-gray-500"><span className="text-green-500">✓</span>{s}</div>
+            ))}
+          </div>
+        </div>
+        <div className="p-4 border-t border-gray-100 flex gap-2">
+          <button onClick={onClose} className="flex-1 border border-gray-300 rounded-lg py-2 text-sm text-gray-600 hover:bg-gray-50">{t.reportClose}</button>
+          <button onClick={generatePdf} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg py-2 text-sm font-semibold">{t.downloadPdf}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   // ── Google Auth ──
   const { user: googleUser, ready: gsiReady, logout: googleLogout, accessToken } = useGoogleAuth();
@@ -1103,8 +1353,12 @@ export default function App() {
     { id: 1, name: "Site 1", type: "area", pathLen: 0, width: 40, height: 35,
       diff: { outdoor:0, elevation:0, roadWidth:0.1, surface:0, complexity:0.1, paved:0, capacity:0.1 } },
   ]);
+  const [hwConfig, setHwConfig] = useState(DEFAULT_HW_CONFIG);
   const [hwCounts, setHwCounts] = useState({ xt32:6, ot128:0, qt128:0, zt128:0, server:0, etc:6 });
   const [annThruput, setAnnThruput] = useState(300000);
+  const [hwPresets, setHwPresets] = useState(() => loadHwPresets());
+  const [hwPresetName, setHwPresetName] = useState("");
+  const [showReport, setShowReport] = useState(false);
 
   const cd = COUNTRIES[cKey];
   const capexBase = capexHW + capexNRE * diffFactor + capexInst + capexOther;
@@ -1322,7 +1576,7 @@ export default function App() {
     const totalArea     = siteRows.reduce((s, r) => s + r.totalSize, 0);
     const totalAdjusted = siteRows.reduce((s, r) => s + r.adjusted, 0);
 
-    const hwTotal = Object.entries(hwCounts).reduce((s,[k,n]) => s + n * HW_PRICES[k].price, 0);
+    const hwTotal = hwConfig.reduce((s, hw) => s + (hwCounts[hw.id] || 0) * hw.price, 0);
 
     const capexSub       = hwTotal + totalNRE + DEV_LICENSE_AMT;
     const capexWithOH    = capexSub * (1 + capexOverhead / 100);
@@ -1348,7 +1602,7 @@ export default function App() {
       hwTotal, capexSub, capexWithOH, capexWithMgn, capexFinal,
       vw, swLicense, hwWarranty, siteSup, swUpd, overhaulA, opexDirect, opexFinal,
     };
-  }, [sites, hwCounts, annThruput, capexOverhead, capexMargin, capexDiscount,
+  }, [sites, hwConfig, hwCounts, annThruput, capexOverhead, capexMargin, capexDiscount,
       hwWarrantyRate, supportPerM2, swUpdatePerM2, overhaulRate, overhaulCycle]);
 
   const lbl = {
@@ -1387,6 +1641,18 @@ export default function App() {
         />
       )}
       {showChangelog && <ChangelogModal onClose={() => setShowChangelog(false)} lang={lang} />}
+      {showReport && (
+        <ReportModal
+          onClose={() => setShowReport(false)}
+          t={t} lang={lang}
+          R={R} PC={PC} capex={capex}
+          capexHW={capexHW} capexNRE={capexNRE} capexInst={capexInst} capexOther={capexOther}
+          capexBase={capexBase} capexAfterOverhead={capexAfterOverhead} capexAfterMargin={capexAfterMargin}
+          capexOverhead={capexOverhead} capexMargin={capexMargin} capexDiscount={capexDiscount}
+          opexMode={opexMode} opexArea={opexArea} life={life} projYrs={projYrs}
+          loadedName={loadedName} googleUser={googleUser}
+        />
+      )}
 
       {/* Header */}
       <div className="bg-blue-700 text-white px-6 py-4">
@@ -1420,6 +1686,9 @@ export default function App() {
             </div>
             <button onClick={() => setShowList(true)} className="flex items-center gap-1.5 bg-blue-800 hover:bg-blue-900 text-white text-xs px-3 py-1.5 rounded-lg transition-colors">
               {sheetsLoading ? "⏳" : "🏭"} {t.presets} {presets.length > 0 && <span className="bg-blue-500 text-white text-xs rounded-full px-1.5">{presets.length}</span>}
+            </button>
+            <button onClick={() => setShowReport(true)} className="flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs px-3 py-1.5 rounded-lg transition-colors">
+              {t.reportBtn}
             </button>
             <button onClick={() => setShowSave(true)} className="flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white text-xs px-3 py-1.5 rounded-lg transition-colors">
               💾 {t.savePreset}
@@ -1741,13 +2010,68 @@ export default function App() {
 
                 {/* HW 구성 */}
                 <div className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">{t.hwSection}</div>
-                <div className="grid grid-cols-2 gap-x-4">
-                  {Object.entries(HW_PRICES).map(([k, hw]) => (
-                    <Row key={k} label={`${hw.label} ($${c(hw.price)})`}>
-                      <Inp v={hwCounts[k]} set={v => setHwCounts({...hwCounts,[k]:v})} min={0} max={200} step={1} unit="EA" />
-                    </Row>
+                <div className="space-y-1 mb-2">
+                  <div className="grid grid-cols-12 gap-1 text-xs text-gray-400 font-semibold px-1">
+                    <span className="col-span-3">{t.hwBrand}</span>
+                    <span className="col-span-4">{t.hwName}</span>
+                    <span className="col-span-3">{t.hwPriceLabel}</span>
+                    <span className="col-span-2 text-right">EA</span>
+                  </div>
+                  {hwConfig.map((hw) => (
+                    <div key={hw.id} className="grid grid-cols-12 gap-1 items-center">
+                      <input value={hw.brand} onChange={e => setHwConfig(hwConfig.map(h => h.id===hw.id ? {...h, brand:e.target.value} : h))}
+                        className="col-span-3 border border-gray-200 rounded px-1.5 py-1 text-xs focus:outline-none focus:border-blue-400" />
+                      <input value={hw.label} onChange={e => setHwConfig(hwConfig.map(h => h.id===hw.id ? {...h, label:e.target.value} : h))}
+                        className="col-span-4 border border-gray-200 rounded px-1.5 py-1 text-xs focus:outline-none focus:border-blue-400" />
+                      <Inp v={hw.price} set={v => setHwConfig(hwConfig.map(h => h.id===hw.id ? {...h, price:v} : h))}
+                        min={0} max={500000} step={100} w="w-full" />
+                      <div className="col-span-2 flex items-center justify-end gap-0.5">
+                        <Inp v={hwCounts[hw.id]||0} set={v => setHwCounts({...hwCounts,[hw.id]:v})} min={0} max={500} step={1} w="w-12" />
+                        {hw.id.startsWith("custom_") && (
+                          <button onClick={() => { setHwConfig(hwConfig.filter(h=>h.id!==hw.id)); const nc={...hwCounts}; delete nc[hw.id]; setHwCounts(nc); }}
+                            className="text-red-400 hover:text-red-600 text-xs ml-0.5 leading-none">{t.removeHw}</button>
+                        )}
+                      </div>
+                    </div>
                   ))}
                 </div>
+                <div className="flex gap-2 mb-3">
+                  <button onClick={() => { const id=`custom_${Date.now()}`; setHwConfig([...hwConfig,{id,brand:"",label:"Custom HW",price:0}]); setHwCounts({...hwCounts,[id]:0}); }}
+                    className="text-xs text-blue-500 border border-blue-200 rounded-lg px-2 py-1 hover:bg-blue-50">{t.addHwItem}</button>
+                  <button onClick={() => { setHwConfig(DEFAULT_HW_CONFIG); setHwCounts({ xt32:6, ot128:0, qt128:0, zt128:0, server:0, etc:6 }); }}
+                    className="text-xs text-gray-400 border border-gray-200 rounded-lg px-2 py-1 hover:bg-gray-50">{t.resetHwDefault}</button>
+                </div>
+                {/* HW Config Presets */}
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">{t.hwPresetSection}</div>
+                <div className="flex gap-1 mb-2">
+                  <input value={hwPresetName} onChange={e => setHwPresetName(e.target.value)} placeholder={t.hwPresetNamePh}
+                    className="flex-1 border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:border-blue-400" />
+                  <button onClick={() => {
+                    if (!hwPresetName.trim()) return;
+                    const p = { id: String(Date.now()), name: hwPresetName.trim(), savedAt: new Date().toISOString(), config: hwConfig, counts: hwCounts };
+                    const next = [...hwPresets, p]; setHwPresets(next); saveHwPresets(next); setHwPresetName("");
+                  }} className="text-xs bg-blue-600 text-white px-2 py-1 rounded-lg hover:bg-blue-700">{t.saveHwPreset}</button>
+                </div>
+                {hwPresets.length === 0 ? (
+                  <div className="text-xs text-gray-400 text-center py-2">{t.noHwPresets}</div>
+                ) : (
+                  <div className="space-y-1 mb-3">
+                    {hwPresets.map(p => (
+                      <div key={p.id} className="flex items-center justify-between border border-gray-200 rounded-lg px-2 py-1.5">
+                        <div>
+                          <div className="text-xs font-semibold text-gray-700">{p.name}</div>
+                          <div className="text-xs text-gray-400">{new Date(p.savedAt).toLocaleDateString()}</div>
+                        </div>
+                        <div className="flex gap-1">
+                          <button onClick={() => { setHwConfig(p.config); setHwCounts(p.counts); }}
+                            className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded hover:bg-blue-700">{t.loadHwConfig}</button>
+                          <button onClick={() => { const next=hwPresets.filter(x=>x.id!==p.id); setHwPresets(next); saveHwPresets(next); }}
+                            className="text-xs border border-red-200 text-red-500 px-2 py-0.5 rounded hover:bg-red-50">{t.deleteHwConfig}</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <Row label={t.annThroughput} hint={t.annThroughputHint}>
                   <Inp v={annThruput} set={setAnnThruput} min={0} max={2000000} step={10000} w="w-28" comma />
                 </Row>
@@ -1875,6 +2199,105 @@ export default function App() {
             <KPI label={`${projYrs}${t.netSavings}`} value={R.finSav > 0 ? $M(R.finSav) : t.negative} sub={t.afterSRCost} hi={R.finSav > 0} />
             <KPI label={t.totalROI} value={R.finSav > 0 ? `${c(R.roiPct, 0)}%` : "—"} sub={`${t.vsCapex} ${projYrs} ${t.yrs}`} />
             <KPI label={t.maxAnnSavings} value={$M(R.annLaborBaseline - R.annSRTot)} sub={t.laborMinusSR} />
+          </div>
+
+          {/* Analytics Deep Dive */}
+          <div className="bg-white rounded-xl shadow-sm p-4">
+            <div className="font-bold text-gray-700 mb-4 text-sm">{t.analyticsTitle}</div>
+            <div className="grid grid-cols-2 gap-6">
+              {/* Doughnut 1: CAPEX Breakdown */}
+              <div>
+                <div className="text-xs font-semibold text-gray-500 mb-2 text-center">{t.capexPieTitle}</div>
+                <div style={{height:180}}>
+                  <Doughnut data={{
+                    labels: ["HW", "NRE", "Installation", "Other", "Overhead", "Margin"],
+                    datasets: [{ data: [
+                      Math.max(0, capexHW),
+                      Math.max(0, capexNRE * (capex > 0 ? 1 : 0)),
+                      Math.max(0, capexInst),
+                      Math.max(0, capexOther),
+                      Math.max(0, capexBase * capexOverhead / 100),
+                      Math.max(0, capexAfterOverhead * capexMargin / 100),
+                    ], backgroundColor: ["#3b82f6","#8b5cf6","#06b6d4","#f59e0b","#10b981","#f97316"],
+                    borderWidth: 1, hoverOffset: 4 }],
+                  }} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position:"right", labels:{ font:{size:10}, boxWidth:12 } }, tooltip: { callbacks: { label: ctx => ` $${c(ctx.raw)}` } } } }} />
+                </div>
+              </div>
+              {/* Doughnut 2: Annual Cost Mix */}
+              <div>
+                <div className="text-xs font-semibold text-gray-500 mb-2 text-center">{t.costPieTitle}</div>
+                <div style={{height:180}}>
+                  <Doughnut data={{
+                    labels: ["Remaining Labor","SR OPEX","SR Depreciation","Labor Saved"],
+                    datasets: [{ data: [
+                      Math.max(0, R.chart[0]?.["Remaining Labor"] || 0),
+                      Math.max(0, R.chart[0]?.["SR OPEX"] || 0),
+                      Math.max(0, R.chart[0]?.["SR Depreciation"] || 0),
+                      Math.max(0, (R.chart[0]?.["Labor Baseline"] || 0) - (R.chart[0]?.["Remaining Labor"] || 0)),
+                    ], backgroundColor: ["#f97316","#3b82f6","#93c5fd","#10b981"],
+                    borderWidth: 1, hoverOffset: 4 }],
+                  }} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position:"right", labels:{ font:{size:10}, boxWidth:12 } }, tooltip: { callbacks: { label: ctx => ` $${c(ctx.raw)}` } } } }} />
+                </div>
+              </div>
+              {/* Area Chart: Savings trajectory */}
+              <div className="col-span-2">
+                <div className="text-xs font-semibold text-gray-500 mb-2">📈 Cumulative Savings Trajectory</div>
+                <ResponsiveContainer width="100%" height={160}>
+                  <AreaChart data={R.chart} margin={{top:4,right:8,left:0,bottom:0}}>
+                    <defs>
+                      <linearGradient id="savGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/>
+                    <XAxis dataKey="year" tick={{fontSize:10}}/>
+                    <YAxis tickFormatter={v=>`$${(v/1e6).toFixed(1)}M`} tick={{fontSize:10}} width={52}/>
+                    <Tooltip formatter={v=>[`$${c(v)}`,"Cum. Savings"]}/>
+                    <Area type="monotone" dataKey="savings" stroke="#10b981" strokeWidth={2} fill="url(#savGrad)" dot={false}/>
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+              {/* Radar: ROI KPIs */}
+              <div className="col-span-2">
+                <div className="text-xs font-semibold text-gray-500 mb-2 text-center">{t.savingsRadarTitle}</div>
+                <div style={{height:200}}>
+                  <Radar data={{
+                    labels: ["ROI %","BEP Speed","Labor Save%","OPEX Efficiency","Yr1 Savings%","Coverage%"],
+                    datasets: [{
+                      label: lang==="ko" ? "ROI 지표" : "ROI Metrics",
+                      data: [
+                        Math.min(100, Math.max(0, R.roiPct / 3)),
+                        R.bep === "N/A" ? 0 : Math.min(100, Math.max(0, (projYrs - parseInt(R.bep.replace("Y","")) + 1) / projYrs * 100)),
+                        Math.min(100, Math.max(0, (1 - R.annLaborRemaining / Math.max(1,R.annLaborBaseline)) * 100)),
+                        Math.min(100, Math.max(0, capex > 0 ? (1 - R.annOpex / Math.max(1,capex) * life) * 100 : 0)),
+                        Math.min(100, Math.max(0, R.yr1Savings > 0 ? Math.min(R.yr1Savings / Math.max(1,R.annLaborBaseline) * 200, 100) : 0)),
+                        Math.min(100, srRatio),
+                      ],
+                      backgroundColor: "rgba(59,130,246,0.15)", borderColor:"#3b82f6", pointBackgroundColor:"#3b82f6",
+                    }],
+                  }} options={{ responsive:true, maintainAspectRatio:false, scales:{ r:{ min:0, max:100, ticks:{stepSize:25,font:{size:9}}, pointLabels:{font:{size:10}} } }, plugins:{ legend:{display:false} } }} />
+                </div>
+              </div>
+              {/* Horizontal bar: year-by-year savings */}
+              <div className="col-span-2">
+                <div className="text-xs font-semibold text-gray-500 mb-2">💰 Annual Savings by Year</div>
+                <div style={{height: Math.max(120, R.chart.length * 28)}}>
+                  <CBar data={{
+                    labels: R.chart.map(r=>r.year),
+                    datasets: [{
+                      label: lang==="ko" ? "연간 절감액" : "Annual Savings",
+                      data: R.chart.map(r => r["Labor Baseline"] - r["Remaining Labor"] - r["SR OPEX"] - r["SR Depreciation"]),
+                      backgroundColor: R.chart.map(r => (r["Labor Baseline"] - r["Remaining Labor"] - r["SR OPEX"] - r["SR Depreciation"]) > 0 ? "#10b981" : "#ef4444"),
+                      borderRadius: 4,
+                    }],
+                  }} options={{ indexAxis:"y", responsive:true, maintainAspectRatio:false,
+                    plugins:{ legend:{display:false}, tooltip:{callbacks:{label: ctx=>`$${c(ctx.raw)}`}} },
+                    scales:{ x:{ ticks:{callback:v=>`$${(v/1e6).toFixed(1)}M`,font:{size:10}}, grid:{color:"#f3f4f6"} }, y:{ticks:{font:{size:10}}} }
+                  }} />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
