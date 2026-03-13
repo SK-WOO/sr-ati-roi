@@ -5,9 +5,20 @@ import {
 } from "recharts";
 
 // ── Version & Changelog ────────────────────────────────
-const VERSION = "v1.6.0";
+const VERSION = "v1.7.0";
 const BUILD_DATE = "2026-03-13";
 const CHANGELOG = [
+  {
+    version: "v1.7.0", date: "2026-03-13",
+    en: ["Added 🧮 Pricing Calc tab (5th tab)",
+         "Site / HW input → CAPEX & OPEX auto-calculation",
+         "NRE difficulty factor per site",
+         "Apply to SR Pricing tab button"],
+    ko: ["🧮 가격 계산 탭 추가 (5번째 탭)",
+         "사이트 / HW 입력 → CAPEX & OPEX 자동 계산",
+         "사이트별 NRE 난이도 계수",
+         "SR Pricing 탭에 적용 버튼 추가"],
+  },
   {
     version: "v1.6.0", date: "2026-03-13",
     en: ["Preset storage migrated to Google Sheets (team-shared)",
@@ -191,8 +202,8 @@ const T = {
     publicHolidays: "Public Holidays",
     avgAnnualWage: "Avg. Annual Wage",
     wageInflation: "Wage Inflation",
-    tabs: ["📦 Production", "🚗 Transport", "👷 Workforce", "🤖 SR Pricing"],
-    tabIds: ["prod", "trans", "work", "sr"],
+    tabs: ["📦 Production", "🚗 Transport", "👷 Workforce", "🤖 SR Pricing", "🧮 Pricing Calc"],
+    tabIds: ["prod", "trans", "work", "sr", "calc"],
     prodTitle: "Production Parameters",
     prodSub: "Inputs → CAPA & UPH back-calculation",
     regDays: "Regular Working Days / Year",
@@ -388,6 +399,37 @@ const T = {
     opexDirectLbl: "Direct OPEX",
     changelog: "Changelog",
     changelogTitle: "Release Notes",
+    calcTab: "🧮 Pricing Calc",
+    calcTitle: "Pricing Calculator",
+    calcSub: "Site info → CAPEX & OPEX auto-calculation",
+    sitesSection: "🏗 Use Cases / Sites",
+    addSite: "+ Add Site",
+    removeSite: "Remove",
+    siteName: "Site Name",
+    measureType: "Measurement Type",
+    lengthType: "Length (m)",
+    areaType: "Area (m²)",
+    pathLength: "Path Length",
+    areaWidth: "Width",
+    areaHeight: "Height",
+    difficultySection: "⚠️ Difficulty Factors",
+    diffLabels: ["Outdoor/Indoor","Elevation","Road Width","Surface","Complexity","Paved/Unpaved","Vehicle Cap."],
+    hwSection: "🔧 Hardware Configuration",
+    annThroughput: "Annual Throughput",
+    annThroughputHint: "Affects SW License vehicle weight multiplier",
+    vwLabel: "Vehicle Weight Multiplier",
+    nreResult: "📋 NRE Calculation",
+    hwResult: "🔧 HW Total",
+    capexResult: "💰 CAPEX Summary",
+    opexResult: "📊 OPEX Summary",
+    applyBtn: "✅ Apply to SR Pricing Tab",
+    devLicense: "Dev License",
+    hwWarrantyCalc: "HW Warranty",
+    siteSupportCalc: "Site Support",
+    swUpdateCalc: "SW Update",
+    swLicenseCalc: "SW License",
+    overhaulCalc: "Overhaul (ann.)",
+    opexDirectCalc: "OPEX Direct",
   },
   ko: {
     title: "SR ATI ROI 계산기",
@@ -400,8 +442,8 @@ const T = {
     publicHolidays: "법정 공휴일",
     avgAnnualWage: "평균 연봉",
     wageInflation: "임금 인상률",
-    tabs: ["📦 생산", "🚗 운송", "👷 인력", "🤖 SR 가격"],
-    tabIds: ["prod", "trans", "work", "sr"],
+    tabs: ["📦 생산", "🚗 운송", "👷 인력", "🤖 SR 가격", "🧮 가격 계산"],
+    tabIds: ["prod", "trans", "work", "sr", "calc"],
     prodTitle: "생산 파라미터",
     prodSub: "입력값 → CAPA & UPH 역산",
     regDays: "연간 정규 근무일",
@@ -597,6 +639,37 @@ const T = {
     opexDirectLbl: "직접 OPEX",
     changelog: "변경 이력",
     changelogTitle: "릴리즈 노트",
+    calcTab: "🧮 가격 계산",
+    calcTitle: "가격 계산기",
+    calcSub: "사이트 정보 → CAPEX & OPEX 자동 계산",
+    sitesSection: "🏗 유스케이스 / 사이트",
+    addSite: "+ 사이트 추가",
+    removeSite: "삭제",
+    siteName: "사이트명",
+    measureType: "측정 방식",
+    lengthType: "길이 (m)",
+    areaType: "면적 (m²)",
+    pathLength: "경로 길이",
+    areaWidth: "너비",
+    areaHeight: "높이",
+    difficultySection: "⚠️ 난이도 요소",
+    diffLabels: ["실외/실내","층수","도로 폭","표면 상태","복잡도","포장/비포장","차량 용량"],
+    hwSection: "🔧 하드웨어 구성",
+    annThroughput: "연간 처리량",
+    annThroughputHint: "SW 라이센스 차량 중량 계수에 영향",
+    vwLabel: "차량 중량 계수",
+    nreResult: "📋 NRE 계산",
+    hwResult: "🔧 HW 합계",
+    capexResult: "💰 CAPEX 요약",
+    opexResult: "📊 OPEX 요약",
+    applyBtn: "✅ SR Pricing 탭에 적용",
+    devLicense: "개발 라이센스",
+    hwWarrantyCalc: "HW 보증",
+    siteSupportCalc: "현장 지원",
+    swUpdateCalc: "SW 업데이트",
+    swLicenseCalc: "SW 라이센스",
+    overhaulCalc: "오버홀 (연간)",
+    opexDirectCalc: "직접 OPEX",
   }
 };
 
@@ -685,6 +758,18 @@ async function sheetsDeleteRow(token, rowIndex) {
 }
 
 const clamp = (v, min, max, fallback) => { const n = Number(v); return (isNaN(n) || !isFinite(n)) ? fallback : Math.min(Math.max(n, min), max); };
+
+const HW_PRICES = {
+  xt32:  { label: "Lidar XT32",  price: 4500  },
+  ot128: { label: "Lidar OT128", price: 12600 },
+  qt128: { label: "Lidar QT128", price: 5000  },
+  zt128: { label: "Lidar ZT128", price: 1620  },
+  server:{ label: "Server",      price: 27000 },
+  etc:   { label: "Accessories", price: 1000  },
+};
+const NRE_UNIT = { length: 575, area: 11500 };
+const NRE_BASE = { length: 5,   area: 100   };
+const DEV_LICENSE_AMT = 84000;
 
 const COUNTRIES = {
   US: { name: "🇺🇸 United States",  holidays: 11, avgWage: 52000, surcharge: 30, inflation: 3.0 },
@@ -1013,6 +1098,14 @@ export default function App() {
   const [opexDiscount1, setOpexDiscount1] = useState(30);
   const [opexDiscountStep, setOpexDiscountStep] = useState(3);
 
+  // ── Pricing Calc tab state ──
+  const [sites, setSites] = useState([
+    { id: 1, name: "Site 1", type: "area", pathLen: 0, width: 40, height: 35,
+      diff: { outdoor:0, elevation:0, roadWidth:0.1, surface:0, complexity:0.1, paved:0, capacity:0.1 } },
+  ]);
+  const [hwCounts, setHwCounts] = useState({ xt32:6, ot128:0, qt128:0, zt128:0, server:0, etc:6 });
+  const [annThruput, setAnnThruput] = useState(300000);
+
   const cd = COUNTRIES[cKey];
   const capexBase = capexHW + capexNRE * diffFactor + capexInst + capexOther;
   const capexAfterOverhead = capexBase * (1 + capexOverhead / 100);
@@ -1108,6 +1201,18 @@ export default function App() {
     showToast(t.updated(loadedName));
   };
 
+  const applyPricingCalc = () => {
+    setCapexHW(Math.round(PC.hwTotal));
+    setCapexNRE(Math.round(PC.totalNRE));
+    setCapexInst(DEV_LICENSE_AMT);
+    setCapexOther(0);
+    setDiffFactor(1.0);
+    setOpexMode("area");
+    setOpexArea(Math.round(PC.totalArea));
+    setTab("sr");
+    showToast(lang === "ko" ? "✅ SR Pricing 탭에 적용됨" : "✅ Applied to SR Pricing tab");
+  };
+
   const R = useMemo(() => {
     const effDays = Math.max(1, regDays + holDays - cd.holidays);
     const hps = regHrs + otHrs;
@@ -1200,6 +1305,51 @@ export default function App() {
       capex, life, opexMode, opexPM, opexArea, opexPerM2, srGrw, projYrs,
       capexHW, capexOverhead, capexMargin, diffFactor, hwWarrantyRate, supportPerM2,
       swUpdatePerM2, overhaulRate, overhaulCycle, opexDiscount1, opexDiscountStep]);
+
+  const PC = useMemo(() => {
+    const siteRows = sites.map(s => {
+      const totalSize = s.type === "length" ? s.pathLen : s.width * s.height;
+      const baseUnit  = NRE_BASE[s.type];
+      const converted = totalSize / Math.max(1, baseUnit);
+      const diffSum   = Object.values(s.diff).reduce((a,b) => a+b, 0);
+      const df        = 1 + diffSum;
+      const adjusted  = converted * df;
+      const nreAmt    = adjusted * NRE_UNIT[s.type];
+      return { ...s, totalSize, converted, df, adjusted, nreAmt };
+    });
+
+    const totalNRE      = siteRows.reduce((s, r) => s + r.nreAmt, 0);
+    const totalArea     = siteRows.reduce((s, r) => s + r.totalSize, 0);
+    const totalAdjusted = siteRows.reduce((s, r) => s + r.adjusted, 0);
+
+    const hwTotal = Object.entries(hwCounts).reduce((s,[k,n]) => s + n * HW_PRICES[k].price, 0);
+
+    const capexSub       = hwTotal + totalNRE + DEV_LICENSE_AMT;
+    const capexWithOH    = capexSub * (1 + capexOverhead / 100);
+    const capexWithMgn   = capexWithOH * (1 + capexMargin / 100);
+    const capexFinal     = capexWithMgn * (1 - capexDiscount / 100);
+
+    const vw = annThruput < 100000 ? 1.0 : annThruput < 150000 ? 1.01
+             : annThruput < 200000 ? 1.02 : annThruput < 250000 ? 1.03
+             : annThruput < 300000 ? 1.04 : annThruput < 350000 ? 1.05
+             : annThruput < 400000 ? 1.06 : annThruput < 450000 ? 1.07
+             : annThruput < 500000 ? 1.08 : 1.09;
+    const swLicense = totalAdjusted * (siteRows[0]?.type === "length" ? 62.5 : 1250) * vw;
+
+    const hwWarranty = hwTotal * (hwWarrantyRate / 100);
+    const siteSup    = totalArea * supportPerM2;
+    const swUpd      = totalArea * swUpdatePerM2;
+    const overhaulA  = (hwTotal * overhaulRate / 100) / Math.max(1, overhaulCycle);
+    const opexDirect = hwWarranty + siteSup + swUpd + overhaulA + swLicense;
+    const opexFinal  = opexDirect * (1 + capexOverhead / 100) * (1 + capexMargin / 100);
+
+    return {
+      siteRows, totalNRE, totalArea, totalAdjusted,
+      hwTotal, capexSub, capexWithOH, capexWithMgn, capexFinal,
+      vw, swLicense, hwWarranty, siteSup, swUpd, overhaulA, opexDirect, opexFinal,
+    };
+  }, [sites, hwCounts, annThruput, capexOverhead, capexMargin, capexDiscount,
+      hwWarrantyRate, supportPerM2, swUpdatePerM2, overhaulRate, overhaulCycle]);
 
   const lbl = {
     laborBaseline:  lang === "ko" ? "기준 인건비 (100%)" : "Labor Baseline (100%)",
@@ -1534,6 +1684,113 @@ export default function App() {
                   <div><div className="text-gray-500">{t.yr1Savings}</div><div className={`font-bold text-base ${R.yr1Savings > 0 ? "text-green-700" : "text-red-500"}`}>{$c(R.yr1Savings)}</div></div>
                   <div className="col-span-2"><div className="text-gray-500">{t.cumBEP}</div><div className="font-bold text-purple-700 text-xl">{R.bep}</div></div>
                 </div>
+              </>}
+
+              {tab === "calc" && <>
+                <SecHead n="5" title={t.calcTitle} sub={t.calcSub} />
+
+                {/* 사이트 목록 */}
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">{t.sitesSection}</div>
+                {sites.map((s, si) => {
+                  const row = PC.siteRows[si];
+                  return (
+                    <div key={s.id} className="border border-gray-200 rounded-xl p-3 mb-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <input value={s.name} onChange={e => setSites(sites.map((x,i) => i===si ? {...x, name:e.target.value} : x))}
+                          className="text-sm font-semibold border-b border-gray-300 focus:outline-none focus:border-blue-500 w-28" />
+                        <div className="flex gap-1">
+                          <button onClick={() => setSites(sites.map((x,i) => i===si ? {...x, type: x.type==="area"?"length":"area", pathLen:0, width:40, height:35} : x))}
+                            className={`text-xs px-2 py-0.5 rounded ${s.type==="area" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600"}`}>{t.areaType}</button>
+                          <button onClick={() => setSites(sites.map((x,i) => i===si ? {...x, type: x.type==="length"?"area":"length", pathLen:0, width:40, height:35} : x))}
+                            className={`text-xs px-2 py-0.5 rounded ${s.type==="length" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600"}`}>{t.lengthType}</button>
+                          {sites.length > 1 && <button onClick={() => setSites(sites.filter((_,i)=>i!==si))} className="text-xs text-red-400 hover:text-red-600 ml-1">{t.removeSite}</button>}
+                        </div>
+                      </div>
+                      {s.type === "length" ? (
+                        <div className="flex items-center gap-2 text-xs mb-2">
+                          <span className="text-gray-500 w-20">{t.pathLength}</span>
+                          <Inp v={s.pathLen} set={v => setSites(sites.map((x,i)=>i===si?{...x,pathLen:v}:x))} min={0} max={10000} step={10} unit="m" />
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-4 text-xs mb-2">
+                          <div className="flex items-center gap-1"><span className="text-gray-500 w-8">{t.areaWidth}</span><Inp v={s.width} set={v => setSites(sites.map((x,i)=>i===si?{...x,width:v}:x))} min={0} max={1000} step={5} unit="m" /></div>
+                          <span className="text-gray-300">×</span>
+                          <div className="flex items-center gap-1"><span className="text-gray-500 w-8">{t.areaHeight}</span><Inp v={s.height} set={v => setSites(sites.map((x,i)=>i===si?{...x,height:v}:x))} min={0} max={1000} step={5} unit="m" /></div>
+                          <span className="text-gray-400 text-xs">= {c(s.width*s.height)} m²</span>
+                        </div>
+                      )}
+                      <div className="text-xs font-bold text-gray-400 mb-1">{t.difficultySection}</div>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                        {Object.keys(s.diff).map((dk, di) => (
+                          <div key={dk} className="flex items-center justify-between">
+                            <span className="text-gray-500 text-xs">{t.diffLabels[di]}</span>
+                            <Inp v={s.diff[dk]} set={v => setSites(sites.map((x,i)=>i===si?{...x,diff:{...x.diff,[dk]:v}}:x))}
+                              min={0} max={di===0||di===5?0.1:0.3} step={0.05} w="w-14" />
+                          </div>
+                        ))}
+                      </div>
+                      {row && <div className="mt-2 text-xs text-blue-600 font-semibold">
+                        Converted: {row.converted.toFixed(1)} × DF {row.df.toFixed(2)} = Adj. {row.adjusted.toFixed(1)} → NRE {$c(row.nreAmt)}
+                      </div>}
+                    </div>
+                  );
+                })}
+                <button onClick={() => setSites([...sites, {id:Date.now(), name:`Site ${sites.length+1}`, type:"area", pathLen:0, width:40, height:35,
+                  diff:{outdoor:0,elevation:0,roadWidth:0,surface:0,complexity:0.1,paved:0,capacity:0.1}}])}
+                  className="w-full border border-dashed border-blue-300 text-blue-500 text-xs py-2 rounded-lg hover:bg-blue-50 mb-3">{t.addSite}</button>
+
+                {/* HW 구성 */}
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">{t.hwSection}</div>
+                <div className="grid grid-cols-2 gap-x-4">
+                  {Object.entries(HW_PRICES).map(([k, hw]) => (
+                    <Row key={k} label={`${hw.label} ($${c(hw.price)})`}>
+                      <Inp v={hwCounts[k]} set={v => setHwCounts({...hwCounts,[k]:v})} min={0} max={200} step={1} unit="EA" />
+                    </Row>
+                  ))}
+                </div>
+                <Row label={t.annThroughput} hint={t.annThroughputHint}>
+                  <Inp v={annThruput} set={setAnnThruput} min={0} max={2000000} step={10000} w="w-28" comma />
+                </Row>
+
+                {/* 결과 요약 */}
+                <div className="mt-3 bg-indigo-50 rounded-lg p-3 text-xs">
+                  <div className="font-bold text-indigo-800 mb-2">{t.nreResult}</div>
+                  {PC.siteRows.map(r => <CR key={r.id} label={`${r.name} (adj.${r.adjusted.toFixed(1)})`} value={$c(r.nreAmt)} />)}
+                  <CR label={t.devLicense} value={$c(DEV_LICENSE_AMT)} />
+                  <CR label={t.hwResult} value={$c(PC.hwTotal)} col="text-blue-700" />
+                  <div className="flex justify-between pt-1 border-t border-indigo-200 font-bold text-indigo-700 mt-1">
+                    <span>Subtotal (NRE+HW+License)</span><span>{$c(PC.capexSub)}</span>
+                  </div>
+                </div>
+
+                <div className="mt-2 bg-purple-50 rounded-lg p-3 text-xs">
+                  <div className="font-bold text-purple-800 mb-2">{t.capexResult}</div>
+                  <CR label={`+ Overhead (${capexOverhead}%)`} value={$c(PC.capexSub * capexOverhead / 100)} col="text-blue-500" />
+                  <CR label={`+ Margin (${capexMargin}%)`} value={$c(PC.capexWithOH * capexMargin / 100)} col="text-orange-500" />
+                  <CR label={`- Discount (${capexDiscount}%)`} value={`-${$c(PC.capexWithMgn * capexDiscount / 100)}`} col="text-green-600" />
+                  <div className="flex justify-between pt-1 border-t border-purple-200 font-bold text-purple-800 mt-1 text-sm">
+                    <span>{t.totalCapex}</span><span>{$c(PC.capexFinal)}</span>
+                  </div>
+                </div>
+
+                <div className="mt-2 bg-blue-50 rounded-lg p-3 text-xs">
+                  <div className="font-bold text-blue-800 mb-2">{t.opexResult} <span className="font-normal text-gray-400 ml-1">{t.vwLabel}: ×{PC.vw}</span></div>
+                  <CR label={t.hwWarrantyCalc} value={$c(PC.hwWarranty)} />
+                  <CR label={t.siteSupportCalc} value={$c(PC.siteSup)} />
+                  <CR label={t.swUpdateCalc} value={$c(PC.swUpd)} />
+                  <CR label={t.swLicenseCalc} value={$c(PC.swLicense)} />
+                  <CR label={t.overhaulCalc} value={$c(PC.overhaulA)} />
+                  <CR label={t.opexDirectCalc} value={$c(PC.opexDirect)} col="text-gray-700" />
+                  <CR label={`+ OH(${capexOverhead}%) + Margin(${capexMargin}%)`} value={$c(PC.opexFinal - PC.opexDirect)} col="text-orange-500" />
+                  <div className="flex justify-between pt-1 border-t border-blue-200 font-bold text-blue-800 mt-1 text-sm">
+                    <span>{t.annSRTotal}</span><span>{$c(PC.opexFinal)}</span>
+                  </div>
+                </div>
+
+                <button onClick={applyPricingCalc}
+                  className="w-full mt-3 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl text-sm transition-colors">
+                  {t.applyBtn}
+                </button>
               </>}
             </div>
           </div>
