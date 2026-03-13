@@ -1042,7 +1042,7 @@ export default function App() {
         await reloadFromSheets();
       } catch { showToast(t.storageFail, false); }
     } else {
-      const next = presets.filter(p => p !== preset);
+      const next = presets.filter(p => p.id !== preset.id);
       setPresets(next); saveToStorage(next);
     }
   };
