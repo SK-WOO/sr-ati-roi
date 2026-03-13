@@ -483,6 +483,14 @@ const T = {
     downloadPdf: "⬇ Download PDF",
     reportClose: "Close",
     reportSection: "📄 Export Report",
+    reportModeInternal: "📋 Internal Report",
+    reportModeQuotation: "📄 Quotation",
+    contactPerson: "Contact Person",
+    contactPersonPh: "e.g. John Smith",
+    salesRep: "SR Sales Rep",
+    salesRepPh: "e.g. Jane Lee",
+    validityDays: "Quote Validity (days)",
+    downloadQuotation: "⬇ Download Quotation",
     // Toast (sheets)
     sheetsLoadFail: "Sheets load failed — using local data",
     sheetsRefreshFail: "Sheets refresh failed",
@@ -754,6 +762,14 @@ const T = {
     downloadPdf: "⬇ PDF 다운로드",
     reportClose: "닫기",
     reportSection: "📄 리포트 내보내기",
+    reportModeInternal: "📋 내부 보고용",
+    reportModeQuotation: "📄 고객 견적서",
+    contactPerson: "고객 담당자",
+    contactPersonPh: "예: 김철수",
+    salesRep: "SR 영업 담당",
+    salesRepPh: "예: 이영희",
+    validityDays: "견적 유효기간 (일)",
+    downloadQuotation: "⬇ 견적서 PDF 다운로드",
     // Toast (sheets)
     sheetsLoadFail: "Sheets 로드 실패 — 로컬 데이터 사용",
     sheetsRefreshFail: "Sheets 새로고침 실패",
@@ -1080,11 +1096,15 @@ function ChangelogModal({ onClose, lang }) {
 
 function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexInst, capexOther,
   capexBase, capexAfterOverhead, capexAfterMargin, capexOverhead, capexMargin, capexDiscount,
-  opexMode, opexArea, life, projYrs, loadedName, googleUser }) {
+  opexMode, opexArea, life, projYrs, loadedName, googleUser, hwConfig, hwCounts, sites }) {
+  const [mode, setMode] = useState("internal");
   const [author, setAuthor] = useState(googleUser?.name || "");
   const [client, setClient] = useState("");
   const [project, setProject] = useState(loadedName || "");
   const [notes, setNotes] = useState("");
+  const [contactPerson, setContactPerson] = useState("");
+  const [salesRep, setSalesRep] = useState(googleUser?.name || "");
+  const [validDays, setValidDays] = useState(30);
 
   const generatePdf = () => {
     const doc = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
@@ -1214,6 +1234,222 @@ function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexI
     doc.save(fileName);
   };
 
+  const generateQuotationPdf = () => {
+    const doc = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
+    const now = new Date();
+    const dateStr = now.toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
+    const validDate = new Date(now.getTime() + validDays * 86400000)
+      .toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
+    const quoteNo = `QT-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,"0")}${String(now.getDate()).padStart(2,"0")}-${String(now.getHours()).padStart(2,"0")}${String(now.getMinutes()).padStart(2,"0")}`;
+    const W = 210, M = 14;
+
+    // ── Cover header ──
+    doc.setFillColor(15,23,42);
+    doc.rect(0,0,W,28,"F");
+    doc.setFillColor(37,99,235);
+    doc.rect(0,22,W,6,"F");
+    doc.setTextColor(255,255,255);
+    doc.setFont("helvetica","bold"); doc.setFontSize(18);
+    doc.text("COMMERCIAL QUOTATION", M, 13);
+    doc.setFont("helvetica","normal"); doc.setFontSize(8);
+    doc.text("SEOULROBOTICS  ·  Autonomy Through Infrastructure", M, 20);
+    doc.setFont("helvetica","bold"); doc.setFontSize(9);
+    doc.text("ATI — Autonomous Transport Infrastructure", W-M, 13, {align:"right"});
+    doc.setFont("helvetica","normal"); doc.setFontSize(7.5);
+    doc.text("sr-ati-roi.vercel.app", W-M, 20, {align:"right"});
+
+    let y = 34;
+    doc.setTextColor(30,30,30);
+
+    // ── Quote meta + customer block side-by-side ──
+    const col2X = M + 90;
+    // Left: Quote details
+    doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(37,99,235);
+    doc.text("Quote Details", M, y);
+    doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(30,30,30);
+    const metaRows = [
+      ["Quote No.", quoteNo],
+      ["Date", dateStr],
+      ["Valid Until", validDate],
+      ["Prepared by", salesRep||"—"],
+    ];
+    metaRows.forEach(([k,v], i) => {
+      doc.setFont("helvetica","bold"); doc.setTextColor(80,80,80);
+      doc.text(k, M, y+5+i*5.5);
+      doc.setFont("helvetica","normal"); doc.setTextColor(30,30,30);
+      doc.text(v, M+30, y+5+i*5.5);
+    });
+    // Right: Customer block
+    doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(37,99,235);
+    doc.text("Customer", col2X, y);
+    doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(30,30,30);
+    const custRows = [
+      ["Company / OEM", client||"—"],
+      ["Plant / Project", project||"—"],
+      ["Contact Person", contactPerson||"—"],
+    ];
+    custRows.forEach(([k,v], i) => {
+      doc.setFont("helvetica","bold"); doc.setTextColor(80,80,80);
+      doc.text(k, col2X, y+5+i*5.5);
+      doc.setFont("helvetica","normal"); doc.setTextColor(30,30,30);
+      doc.text(v, col2X+32, y+5+i*5.5);
+    });
+    y += 34;
+
+    // Divider
+    doc.setDrawColor(200,200,200); doc.setLineWidth(0.3); doc.line(M, y, W-M, y); y += 6;
+
+    // ── Section 1: Solution Overview ──
+    doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(37,99,235);
+    doc.text("1.  Solution Overview", M, y); y += 5;
+    doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(60,60,60);
+    doc.text("Seoul Robotics ATI replaces manual vehicle transport drivers with an autonomous infrastructure", M, y); y += 4.5;
+    doc.text("platform powered by 3D LiDAR sensors — no vehicle modifications required.", M, y); y += 7;
+
+    // Sites table
+    autoTable(doc, { startY: y, margin:{left:M,right:M}, theme:"striped",
+      headStyles:{fillColor:[37,99,235],fontSize:8,textColor:255},
+      styles:{fontSize:8.5,cellPadding:2},
+      head:[["Site Name","Type","Size","NRE Amount"]],
+      body: PC.siteRows.map(r => [
+        r.name,
+        r.type === "area" ? `Area` : `Length`,
+        r.type === "area" ? `${c(Math.round(r.totalSize))} m²` : `${c(Math.round(r.totalSize))} m`,
+        `$${c(Math.round(r.nreAmt))}`,
+      ]),
+      columnStyles:{3:{halign:"right",fontStyle:"bold"}},
+    });
+    y = doc.lastAutoTable.finalY + 8;
+
+    // ── Section 2: Hardware Bill of Materials ──
+    if (y > 210) { doc.addPage(); y = 14; }
+    doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(37,99,235);
+    doc.text("2.  Hardware Bill of Materials", M, y); y += 5;
+    const hwRows = hwConfig
+      .filter(hw => (hwCounts[hw.id]||0) > 0)
+      .map((hw, i) => [
+        i+1,
+        hw.brand,
+        hw.label,
+        hwCounts[hw.id]||0,
+        `$${c(hw.price)}`,
+        `$${c((hwCounts[hw.id]||0)*hw.price)}`,
+      ]);
+    hwRows.push(["","","","","Total HW", `$${c(PC.hwTotal)}`]);
+    autoTable(doc, { startY: y, margin:{left:M,right:M}, theme:"striped",
+      headStyles:{fillColor:[37,99,235],fontSize:8,textColor:255},
+      styles:{fontSize:8.5,cellPadding:2},
+      head:[["#","Brand","Model / Description","Qty","Unit Price","Amount"]],
+      body: hwRows,
+      columnStyles:{0:{cellWidth:8},3:{halign:"center"},4:{halign:"right"},5:{halign:"right",fontStyle:"bold"}},
+      didParseCell: (d) => { if (d.row.index===hwRows.length-1) { d.cell.styles.fillColor=[219,234,254]; d.cell.styles.fontStyle="bold"; } },
+    });
+    y = doc.lastAutoTable.finalY + 8;
+
+    // ── Section 3: Pricing Summary ──
+    if (y > 190) { doc.addPage(); y = 14; }
+    doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(37,99,235);
+    doc.text("3.  Pricing Summary", M, y); y += 5;
+
+    // CAPEX table
+    doc.setFont("helvetica","bold"); doc.setFontSize(8.5); doc.setTextColor(60,60,60);
+    doc.text("CAPEX", M, y); y += 3;
+    autoTable(doc, { startY: y, margin:{left:M,right:M}, theme:"plain",
+      styles:{fontSize:8.5,cellPadding:1.8},
+      columnStyles:{0:{cellWidth:110,textColor:[60,60,60]},1:{halign:"right",fontStyle:"bold",textColor:[30,30,30]}},
+      body:[
+        ["Hardware (HW)", `$${c(PC.hwTotal)}`],
+        ["NRE — Site Engineering", `$${c(Math.round(PC.totalNRE))}`],
+        ["Development License", `$${c(DEV_LICENSE_AMT)}`],
+        ["Subtotal", `$${c(Math.round(PC.capexSub))}`],
+        [`Overhead (+${capexOverhead}%)`, `$${c(Math.round(PC.capexSub*capexOverhead/100))}`],
+        [`Margin (+${capexMargin}%)`, `$${c(Math.round(PC.capexWithOH*capexMargin/100))}`],
+        [`First Plant Discount (−${capexDiscount}%)`, `−$${c(Math.round(PC.capexWithMgn*capexDiscount/100))}`],
+      ],
+      didParseCell: (d) => { if (d.row.index===6) d.cell.styles.textColor=[22,163,74]; },
+    });
+    // CAPEX total highlight row
+    autoTable(doc, { startY: doc.lastAutoTable.finalY, margin:{left:M,right:M}, theme:"plain",
+      styles:{fontSize:10,cellPadding:2.5,fontStyle:"bold"},
+      columnStyles:{0:{cellWidth:110,fillColor:[219,234,254],textColor:[37,99,235]},1:{halign:"right",fillColor:[219,234,254],textColor:[37,99,235]}},
+      body:[["TOTAL CAPEX", `$${c(Math.round(PC.capexFinal))}`]],
+    });
+    y = doc.lastAutoTable.finalY + 5;
+
+    // OPEX table
+    doc.setFont("helvetica","bold"); doc.setFontSize(8.5); doc.setTextColor(60,60,60);
+    doc.text("Annual OPEX", M, y); y += 3;
+    autoTable(doc, { startY: y, margin:{left:M,right:M}, theme:"plain",
+      styles:{fontSize:8.5,cellPadding:1.8},
+      columnStyles:{0:{cellWidth:110,textColor:[60,60,60]},1:{halign:"right",fontStyle:"bold",textColor:[30,30,30]}},
+      body:[
+        ["HW Warranty", `$${c(Math.round(PC.hwWarranty))}`],
+        ["Site Support", `$${c(Math.round(PC.siteSup))}`],
+        ["SW Update & Maintenance", `$${c(Math.round(PC.swUpd))}`],
+        ["SW License", `$${c(Math.round(PC.swLicense))}`],
+        ["Overhaul (annualized)", `$${c(Math.round(PC.overhaulA))}`],
+      ],
+    });
+    autoTable(doc, { startY: doc.lastAutoTable.finalY, margin:{left:M,right:M}, theme:"plain",
+      styles:{fontSize:10,cellPadding:2.5,fontStyle:"bold"},
+      columnStyles:{0:{cellWidth:110,fillColor:[237,233,254],textColor:[109,40,217]},1:{halign:"right",fillColor:[237,233,254],textColor:[109,40,217]}},
+      body:[["TOTAL ANNUAL OPEX", `$${c(Math.round(PC.opexFinal))}`]],
+    });
+    y = doc.lastAutoTable.finalY + 8;
+
+    // ── Section 4: ROI Highlights ──
+    if (y > 230) { doc.addPage(); y = 14; }
+    doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(37,99,235);
+    doc.text("4.  ROI Highlights", M, y); y += 5;
+    autoTable(doc, { startY: y, margin:{left:M,right:M}, theme:"striped",
+      headStyles:{fillColor:[16,185,129],fontSize:8,textColor:255},
+      styles:{fontSize:9,cellPadding:2.5,halign:"center"},
+      head:[["Break-Even","Yr 1 Savings",`${projYrs}-yr Net Savings`,"Total ROI"]],
+      body:[[
+        R.bep,
+        R.yr1Savings > 0 ? `$${c(R.yr1Savings)}` : "—",
+        R.finSav > 0 ? `+$${c(R.finSav)}` : "—",
+        R.finSav > 0 ? `${c(R.roiPct,0)}%` : "—",
+      ]],
+      columnStyles:{0:{fontStyle:"bold"},1:{fontStyle:"bold"},2:{fontStyle:"bold"},3:{fontStyle:"bold"}},
+    });
+    y = doc.lastAutoTable.finalY + 8;
+
+    // ── Section 5: Terms & Conditions ──
+    if (y > 240) { doc.addPage(); y = 14; }
+    doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(37,99,235);
+    doc.text("5.  Terms & Conditions", M, y); y += 5;
+    const terms = [
+      `• This quotation is valid for ${validDays} days from the date of issue (until ${validDate}).`,
+      "• All prices are quoted in USD and exclude local taxes, duties, and shipping unless stated.",
+      "• Final pricing is subject to a detailed site survey and signed Statement of Work (SoW).",
+      "• Payment terms: 30% upon contract signing, 40% upon hardware delivery, 30% upon commissioning.",
+      "• Seoul Robotics reserves the right to revise pricing upon scope changes or additional site findings.",
+    ];
+    doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(60,60,60);
+    terms.forEach((line, i) => { doc.text(line, M, y + i*5.5); });
+    y += terms.length*5.5 + 8;
+
+    if (notes) {
+      doc.setFont("helvetica","bold"); doc.setFontSize(8.5); doc.setTextColor(37,99,235);
+      doc.text("Additional Notes", M, y); y += 4;
+      doc.setFont("helvetica","normal"); doc.setTextColor(60,60,60);
+      doc.text(notes, M, y, {maxWidth: W-M*2}); y += 8;
+    }
+
+    // ── Footer on all pages ──
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i=1; i<=pageCount; i++) {
+      doc.setPage(i);
+      doc.setFillColor(15,23,42); doc.rect(0,285,W,12,"F");
+      doc.setFont("helvetica","normal"); doc.setFontSize(7); doc.setTextColor(180,180,180);
+      doc.text(`SEOULROBOTICS  ·  Commercial Quotation  ·  ${quoteNo}  ·  Confidential`, M, 291);
+      doc.text(`Page ${i} / ${pageCount}`, W-M, 291, {align:"right"});
+    }
+    const fileName = `SR-Quotation_${(client||"Client").replace(/[^a-zA-Z0-9]/g,"_")}_${now.toISOString().slice(0,10)}.pdf`;
+    doc.save(fileName);
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl shadow-xl w-[480px] max-h-[85vh] flex flex-col">
@@ -1224,36 +1460,90 @@ function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexI
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
         </div>
+
+        {/* Mode toggle */}
+        <div className="px-4 pt-3 pb-0">
+          <div className="flex rounded-lg overflow-hidden border border-gray-200 text-xs font-semibold">
+            <button onClick={()=>setMode("internal")}
+              className={`flex-1 py-2 transition-colors ${mode==="internal" ? "bg-blue-600 text-white" : "text-gray-500 hover:bg-gray-50"}`}>
+              {t.reportModeInternal}
+            </button>
+            <button onClick={()=>setMode("quotation")}
+              className={`flex-1 py-2 transition-colors ${mode==="quotation" ? "bg-indigo-600 text-white" : "text-gray-500 hover:bg-gray-50"}`}>
+              {t.reportModeQuotation}
+            </button>
+          </div>
+        </div>
+
         <div className="overflow-auto flex-1 p-4 space-y-3">
-          <div className="bg-blue-50 rounded-lg p-3 text-xs text-blue-700">
-            {lang==="ko" ? "아래 정보를 입력하면 PDF에 포함됩니다. 현재 모든 계산 결과가 자동으로 포함됩니다." : "Fill in the info below — all current calculation results are automatically included."}
-          </div>
-          {[
-            [t.name, author, setAuthor, t.reportAuthorPh],
-            [t.brandOEM, client, setClient, t.reportClientPh],
-            [t.plant, project, setProject, t.reportProjectPh],
-          ].map(([lbl,val,set,ph]) => (
-            <div key={lbl}>
-              <div className="text-xs text-gray-500 mb-1 font-medium">{lbl}</div>
-              <input value={val} onChange={e=>set(e.target.value)} placeholder={ph}
-                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500"/>
+          {mode === "internal" ? <>
+            <div className="bg-blue-50 rounded-lg p-3 text-xs text-blue-700">
+              {lang==="ko" ? "현재 모든 계산 결과가 자동으로 포함됩니다." : "All current calculation results are automatically included."}
             </div>
-          ))}
-          <div>
-            <div className="text-xs text-gray-500 mb-1 font-medium">{t.notes}</div>
-            <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={2} placeholder={t.reportNotesPh}
-              className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500 resize-none"/>
-          </div>
-          <div className="bg-gray-50 rounded-lg p-3 text-xs space-y-1">
-            <div className="font-semibold text-gray-600 mb-1">{lang==="ko" ? "포함 내용" : "Report Contents"}</div>
-            {["Project Info","Production & Workforce KPIs","CAPEX Breakdown","OPEX & ROI Summary",`${projYrs}-Year ROI Table`].map(s=>(
-              <div key={s} className="flex items-center gap-1.5 text-gray-500"><span className="text-green-500">✓</span>{s}</div>
+            {[
+              [t.name, author, setAuthor, t.reportAuthorPh],
+              [t.brandOEM, client, setClient, t.reportClientPh],
+              [t.plant, project, setProject, t.reportProjectPh],
+            ].map(([lbl,val,set,ph]) => (
+              <div key={lbl}>
+                <div className="text-xs text-gray-500 mb-1 font-medium">{lbl}</div>
+                <input value={val} onChange={e=>set(e.target.value)} placeholder={ph}
+                  className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500"/>
+              </div>
             ))}
-          </div>
+            <div>
+              <div className="text-xs text-gray-500 mb-1 font-medium">{t.notes}</div>
+              <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={2} placeholder={t.reportNotesPh}
+                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500 resize-none"/>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3 text-xs space-y-1">
+              <div className="font-semibold text-gray-600 mb-1">{lang==="ko" ? "포함 내용" : "Report Contents"}</div>
+              {["Project Info","Production & Workforce KPIs","CAPEX Breakdown","OPEX & ROI Summary",`${projYrs}-Year ROI Table`].map(s=>(
+                <div key={s} className="flex items-center gap-1.5 text-gray-500"><span className="text-green-500">✓</span>{s}</div>
+              ))}
+            </div>
+          </> : <>
+            <div className="bg-indigo-50 rounded-lg p-3 text-xs text-indigo-700">
+              {lang==="ko"
+                ? "고객 제공용 견적서입니다. HW BOM, 가격, ROI 하이라이트, 조건이 자동 포함됩니다."
+                : "Customer-facing quotation with HW BOM, pricing, ROI highlights & terms — auto-generated."}
+            </div>
+            {[
+              [t.brandOEM, client, setClient, t.reportClientPh],
+              [t.plant, project, setProject, t.reportProjectPh],
+              [t.contactPerson, contactPerson, setContactPerson, t.contactPersonPh],
+              [t.salesRep, salesRep, setSalesRep, t.salesRepPh],
+            ].map(([lbl,val,set,ph]) => (
+              <div key={lbl}>
+                <div className="text-xs text-gray-500 mb-1 font-medium">{lbl}</div>
+                <input value={val} onChange={e=>set(e.target.value)} placeholder={ph}
+                  className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500"/>
+              </div>
+            ))}
+            <div>
+              <div className="text-xs text-gray-500 mb-1 font-medium">{t.validityDays}</div>
+              <input type="number" value={validDays} onChange={e=>setValidDays(Number(e.target.value))} min={7} max={180}
+                className="w-24 border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-500"/>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 mb-1 font-medium">{t.notes}</div>
+              <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={2} placeholder={t.reportNotesPh}
+                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-500 resize-none"/>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3 text-xs space-y-1">
+              <div className="font-semibold text-gray-600 mb-1">{lang==="ko" ? "포함 내용" : "Quotation Contents"}</div>
+              {["Cover · Quote # · Validity","Solution Overview (Sites)","Hardware BOM (qty + price)","CAPEX & OPEX Pricing","ROI Highlights","Terms & Conditions"].map(s=>(
+                <div key={s} className="flex items-center gap-1.5 text-gray-500"><span className="text-indigo-500">✓</span>{s}</div>
+              ))}
+            </div>
+          </>}
         </div>
         <div className="p-4 border-t border-gray-100 flex gap-2">
           <button onClick={onClose} className="flex-1 border border-gray-300 rounded-lg py-2 text-sm text-gray-600 hover:bg-gray-50">{t.reportClose}</button>
-          <button onClick={generatePdf} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg py-2 text-sm font-semibold">{t.downloadPdf}</button>
+          {mode === "internal"
+            ? <button onClick={generatePdf} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg py-2 text-sm font-semibold">{t.downloadPdf}</button>
+            : <button onClick={generateQuotationPdf} className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg py-2 text-sm font-semibold">{t.downloadQuotation}</button>
+          }
         </div>
       </div>
     </div>
@@ -1678,6 +1968,7 @@ export default function App() {
           capexOverhead={capexOverhead} capexMargin={capexMargin} capexDiscount={capexDiscount}
           opexMode={opexMode} opexArea={opexArea} life={life} projYrs={projYrs}
           loadedName={loadedName} googleUser={googleUser}
+          hwConfig={hwConfig} hwCounts={hwCounts} sites={sites}
         />
       )}
 
