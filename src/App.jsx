@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area
@@ -472,6 +472,14 @@ const T = {
     downloadPdf: "⬇ Download PDF",
     reportClose: "Close",
     reportSection: "📄 Export Report",
+    // Toast (sheets)
+    sheetsLoadFail: "Sheets load failed — using local data",
+    sheetsRefreshFail: "Sheets refresh failed",
+    // Analytics labels
+    cumSavingsTrajectory: "📈 Cumulative Savings Trajectory",
+    annSavingsByYear: "💰 Annual Savings by Year",
+    // OPEX area hint
+    opexAreaHint: (area) => `${area} m² (warranty+support+SW+OH)`,
   },
   ko: {
     title: "SR ATI ROI 계산기",
@@ -735,6 +743,14 @@ const T = {
     downloadPdf: "⬇ PDF 다운로드",
     reportClose: "닫기",
     reportSection: "📄 리포트 내보내기",
+    // Toast (sheets)
+    sheetsLoadFail: "Sheets 로드 실패 — 로컬 데이터 사용",
+    sheetsRefreshFail: "Sheets 새로고침 실패",
+    // Analytics labels
+    cumSavingsTrajectory: "📈 누적 절감액 트렌드",
+    annSavingsByYear: "💰 연도별 절감액",
+    // OPEX area hint
+    opexAreaHint: (area) => `${area} m² (보증+지원+SW+OH)`,
   }
 };
 
@@ -1257,7 +1273,7 @@ export default function App() {
     setSheetsLoading(true);
     sheetsLoad(accessToken)
       .then(list => { setPresets(list); saveToStorage(list); })
-      .catch(() => showToast("Sheets 로드 실패 — 로컬 데이터 사용", false))
+      .catch(() => showToast(t.sheetsLoadFail, false))
       .finally(() => setSheetsLoading(false));
   }, [accessToken]);
 
@@ -1265,7 +1281,7 @@ export default function App() {
     if (!accessToken) return;
     setSheetsLoading(true);
     try { const list = await sheetsLoad(accessToken); setPresets(list); saveToStorage(list); }
-    catch { showToast("Sheets 새로고침 실패", false); }
+    catch { showToast(t.sheetsRefreshFail, false); }
     finally { setSheetsLoading(false); }
   };
 
@@ -1555,7 +1571,7 @@ export default function App() {
     };
   }, [cd, regDays, holDays, regHrs, otHrs, nShifts, capa, yld, srRatio,
       dist, spd, tPre, tPark, tWlk1, tHdwy, tRide, tWlk2, tOvhd,
-      wType, discount, wageMode, hrly, hpw, wpy, annWage, srch, infl,
+      wType, discount, wageMode, hrly, annWage, srch, infl,
       capex, life, opexMode, opexPM, opexArea, opexPerM2, srGrw, projYrs,
       capexHW, capexOverhead, capexMargin, diffFactor, hwWarrantyRate, supportPerM2,
       swUpdatePerM2, overhaulRate, overhaulCycle, opexDiscount1, opexDiscountStep]);
@@ -1832,8 +1848,6 @@ export default function App() {
                 </Row>
                 {wageMode === "hourly" ? <>
                   <Row label={t.baseHourlyRate} hint={t.baseHourlyHint}><Inp v={hrly} set={setHrly} min={1} max={500} step={0.5} unit={t.perHr} /></Row>
-                  <Row label={t.hpw}><Inp v={hpw} set={setHpw} min={10} max={80} unit="h" /></Row>
-                  <Row label={t.wpy}><Inp v={wpy} set={setWpy} min={10} max={52} unit={t.wks} /></Row>
                 </> : <>
                   <Row label={t.annAvgWage} hint={t.annAvgWageHint}>
                     <Inp v={annWage} set={setAnnWage} min={1000} max={500000} step={1000} unit={t.perYr} w="w-28" comma />
@@ -1948,7 +1962,7 @@ export default function App() {
                   <div>
                     <div className="text-gray-500">{t.annOpex}</div>
                     <div className="font-bold text-purple-700">{$c(R.annOpex)}</div>
-                    <div className="text-gray-400">{opexMode === "move" ? t.moves(c(Math.round(R.srCapa)), opexPM) : `${c(opexArea)}m² (warranty+support+SW+OH)`}</div>
+                    <div className="text-gray-400">{opexMode === "move" ? t.moves(c(Math.round(R.srCapa)), opexPM) : t.opexAreaHint(c(opexArea))}</div>
                   </div>
                   <div><div className="text-gray-500">{t.annSRTotal}</div><div className="font-bold text-purple-800 text-base">{$c(R.annSRTot)}</div></div>
                   <div><div className="text-gray-500">{t.yr1Savings}</div><div className={`font-bold text-base ${R.yr1Savings > 0 ? "text-green-700" : "text-red-500"}`}>{$c(R.yr1Savings)}</div></div>
@@ -2223,7 +2237,7 @@ export default function App() {
                     labels: ["HW", "NRE", "Installation", "Other", "Overhead", "Margin"],
                     datasets: [{ data: [
                       Math.max(0, capexHW),
-                      Math.max(0, capexNRE * (capex > 0 ? 1 : 0)),
+                      Math.max(0, capexNRE),
                       Math.max(0, capexInst),
                       Math.max(0, capexOther),
                       Math.max(0, capexBase * capexOverhead / 100),
@@ -2251,7 +2265,7 @@ export default function App() {
               </div>
               {/* Area Chart: Savings trajectory */}
               <div className="col-span-2">
-                <div className="text-xs font-semibold text-gray-500 mb-2">📈 Cumulative Savings Trajectory</div>
+                <div className="text-xs font-semibold text-gray-500 mb-2">{t.cumSavingsTrajectory}</div>
                 <ResponsiveContainer width="100%" height={160}>
                   <AreaChart data={R.chart} margin={{top:4,right:8,left:0,bottom:0}}>
                     <defs>
@@ -2273,7 +2287,9 @@ export default function App() {
                 <div className="text-xs font-semibold text-gray-500 mb-2 text-center">{t.savingsRadarTitle}</div>
                 <div style={{height:200}}>
                   <Radar data={{
-                    labels: ["ROI %","BEP Speed","Labor Save%","OPEX Efficiency","Yr1 Savings%","Coverage%"],
+                    labels: lang==="ko"
+                      ? ["ROI %","BEP 속도","인건비절감%","OPEX 효율","1년차절감%","커버리지%"]
+                      : ["ROI %","BEP Speed","Labor Save%","OPEX Efficiency","Yr1 Savings%","Coverage%"],
                     datasets: [{
                       label: lang==="ko" ? "ROI 지표" : "ROI Metrics",
                       data: [
@@ -2291,7 +2307,7 @@ export default function App() {
               </div>
               {/* Horizontal bar: year-by-year savings */}
               <div className="col-span-2">
-                <div className="text-xs font-semibold text-gray-500 mb-2">💰 Annual Savings by Year</div>
+                <div className="text-xs font-semibold text-gray-500 mb-2">{t.annSavingsByYear}</div>
                 <div style={{height: Math.max(120, R.chart.length * 28)}}>
                   <CBar data={{
                     labels: R.chart.map(r=>r.year),
