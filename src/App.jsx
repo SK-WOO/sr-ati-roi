@@ -20,7 +20,6 @@ function useGoogleAuth() {
     script.onload = () => {
       window.google.accounts.id.initialize({
         client_id: CLIENT_ID,
-        hd: ALLOWED_DOMAIN,
         callback: (res) => {
           try {
             const p = JSON.parse(atob(res.credential.split(".")[1]));
