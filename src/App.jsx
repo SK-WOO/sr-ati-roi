@@ -1,9 +1,100 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from "recharts";
 
+// ── Google Auth ────────────────────────────────────────
+const CLIENT_ID = "318386102464-2bavuh812hpk4gsegb5tkvrsnhartsm9.apps.googleusercontent.com";
+const ALLOWED_DOMAIN = "seoulrobotics.com";
+
+function useGoogleAuth() {
+  const [user, setUser] = useState(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      window.google.accounts.id.initialize({
+        client_id: CLIENT_ID,
+        hd: ALLOWED_DOMAIN,
+        callback: (res) => {
+          try {
+            const p = JSON.parse(atob(res.credential.split(".")[1]));
+            if (!p.email?.endsWith(`@${ALLOWED_DOMAIN}`)) return;
+            setUser({ name: p.name, email: p.email, picture: p.picture });
+          } catch {}
+        },
+      });
+      setReady(true);
+    };
+    document.head.appendChild(script);
+    return () => document.head.removeChild(script);
+  }, []);
+
+   const logout = () => {
+    if (window.google) window.google.accounts.id.disableAutoSelect();
+    setUser(null);
+  };
+  return { user, ready, logout };
+}
+
+function LoginScreen({ ready }) {
+  const btnRef = useRef(null);
+
+  useEffect(() => {
+    if (!ready || !btnRef.current) return;
+    window.google.accounts.id.renderButton(btnRef.current, {
+      type: "standard",
+      shape: "rectangular",
+      theme: "outline",
+      text: "signin_with",
+      size: "large",
+      logo_alignment: "left",
+      width: 280,
+    });
+  }, [ready]);
+
+  return (
+    <div style={{
+      minHeight: "100vh",
+      background: "linear-gradient(135deg,#1e3a5f,#1e293b)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
+    }}>
+      <div style={{
+        background: "#fff", borderRadius: 20, padding: "40px 36px",
+        boxShadow: "0 20px 60px rgba(0,0,0,.3)", width: "100%", maxWidth: 360,
+        textAlign: "center",
+      }}>
+        <div style={{ fontSize: 36, marginBottom: 8 }}>🤖</div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", letterSpacing: 3, marginBottom: 4 }}>
+          SEOULROBOTICS
+        </div>
+        <div style={{ fontSize: 18, fontWeight: 900, color: "#0f172a", marginBottom: 6 }}>
+          ATI ROI Calculator
+        </div>
+        <div style={{ fontSize: 12, color: "#64748b", marginBottom: 28 }}>
+          Autonomy Through Infrastructure
+        </div>
+        <div style={{ display: "flex", justifyContent: "center", minHeight: 44 }}>
+          <div ref={btnRef} />
+        </div>
+        {!ready && (
+          <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 12 }}>Loading...</div>
+        )}
+        <p style={{ fontSize: 11, color: "#94a3b8", marginTop: 16 }}>
+          회사 Google Workspace 계정만 접근 가능합니다
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ── i18n ───────────────────────────────────────────────
 const T = {
   en: {
     title: "SR ATI ROI Calculator",
@@ -182,6 +273,7 @@ const T = {
     moves: (n, pm) => `${n} moves × $${pm}`,
     areaCalc: (area, pm) => `${area}m² × $${pm}/mo × 12`,
     benefitsPct: (pct) => `+ ${pct}% benefits`,
+    logout: "Logout",
   },
   ko: {
     title: "SR ATI ROI 계산기",
@@ -360,12 +452,14 @@ const T = {
     moves: (n, pm) => `${n}회 × $${pm}`,
     areaCalc: (area, pm) => `${area}m² × $${pm}/월 × 12`,
     benefitsPct: (pct) => `+ ${pct}% 복리후생`,
+    logout: "로그아웃",
   }
 };
 
 const STORAGE_KEY = "sr-ati-presets-v3";
 function loadPresets() { try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : []; } catch { return []; } }
 function saveToStorage(list) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); return true; } catch { return false; } }
+const clamp = (v, min, max, fallback) => { const n = Number(v); return (isNaN(n) || !isFinite(n)) ? fallback : Math.min(Math.max(n, min), max); };
 
 const COUNTRIES = {
   US: { name: "🇺🇸 United States",  holidays: 11, avgWage: 52000, surcharge: 30, inflation: 3.0 },
@@ -454,9 +548,7 @@ function PresetModal({ params, onSave, onClose, t }) {
         <div className="font-bold text-gray-800 text-base">{t.saveFactoryPreset}</div>
         <div className="space-y-2">
           <div className="text-xs font-bold text-gray-400 uppercase tracking-wide pt-1">{t.factoryInfo}</div>
-          {[[t.brandOEM, brand, setBrand, t.brandPh],
-            [t.countryLabel, country, setCountry, t.countryPh],
-            [t.plant, plant, setPlant, t.plantPh]].map(([lbl, val, setter, ph]) => (
+          {[[t.brandOEM, brand, setBrand, t.brandPh],[t.countryLabel, country, setCountry, t.countryPh],[t.plant, plant, setPlant, t.plantPh]].map(([lbl, val, setter, ph]) => (
             <div key={lbl}>
               <div className="text-xs text-gray-500 mb-0.5">{lbl}</div>
               <input value={val} onChange={e => setter(e.target.value)} placeholder={ph}
@@ -464,8 +556,7 @@ function PresetModal({ params, onSave, onClose, t }) {
             </div>
           ))}
           <div className="text-xs font-bold text-gray-400 uppercase tracking-wide pt-2">{t.authorInfo}</div>
-          {[[t.name, author, setAuthor, t.namePh],
-            [t.dept, dept, setDept, t.deptPh]].map(([lbl, val, setter, ph]) => (
+          {[[t.name, author, setAuthor, t.namePh],[t.dept, dept, setDept, t.deptPh]].map(([lbl, val, setter, ph]) => (
             <div key={lbl}>
               <div className="text-xs text-gray-500 mb-0.5">{lbl}</div>
               <input value={val} onChange={e => setter(e.target.value)} placeholder={ph}
@@ -494,9 +585,7 @@ function PresetModal({ params, onSave, onClose, t }) {
 
 function PresetPanel({ presets, onLoad, onDelete, onClose, t }) {
   const [search, setSearch] = useState("");
-  const filtered = presets.filter(p =>
-    [p.brand, p.country, p.plant].join(" ").toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = presets.filter(p => [p.brand, p.country, p.plant].join(" ").toLowerCase().includes(search.toLowerCase()));
   const grouped = filtered.reduce((acc, p) => {
     const origIdx = presets.findIndex(op => op.savedAt === p.savedAt && op.plant === p.plant);
     (acc[p.brand] = acc[p.brand] || []).push({ ...p, _idx: origIdx });
@@ -514,9 +603,7 @@ function PresetPanel({ presets, onLoad, onDelete, onClose, t }) {
             className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500" />
         </div>
         <div className="overflow-auto flex-1 p-4 space-y-4">
-          {Object.keys(grouped).length === 0 && (
-            <div className="text-center text-gray-400 text-sm py-8">{t.noPresets}</div>
-          )}
+          {Object.keys(grouped).length === 0 && <div className="text-center text-gray-400 text-sm py-8">{t.noPresets}</div>}
           {Object.entries(grouped).map(([brand, items]) => (
             <div key={brand}>
               <div className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">{brand}</div>
@@ -549,10 +636,12 @@ function PresetPanel({ presets, onLoad, onDelete, onClose, t }) {
 }
 
 export default function App() {
+  // ── Google Auth ──
+  const { user: googleUser, ready: gsiReady, logout: googleLogout } = useGoogleAuth();
+
   const [lang, setLang] = useState("en");
   const t = T[lang];
 
-  // ✅ FIX 1: localStorage 복원 (배포 환경용)
   const [presets, setPresets] = useState(() => loadPresets());
   const [showSave, setShowSave] = useState(false);
   const [showList, setShowList] = useState(false);
@@ -561,10 +650,7 @@ export default function App() {
   const [toast, setToast] = useState(null);
 
   const showToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 2500); };
-  const savePresets = (list) => {
-    setPresets(list);
-    if (!saveToStorage(list)) showToast(t.storageFail, false);
-  };
+  const savePresets = (list) => { setPresets(list); if (!saveToStorage(list)) showToast(t.storageFail, false); };
 
   const [cKey, setCKey] = useState("US");
   const [regDays, setRegDays] = useState(250);
@@ -621,19 +707,45 @@ export default function App() {
 
   const loadPreset = (preset) => {
     const p = preset.params;
-    setCKey(p.cKey); setRegDays(p.regDays); setHolDays(p.holDays); setRegHrs(p.regHrs); setOtHrs(p.otHrs);
-    setNShifts(p.nShifts); setCapa(p.capa); setYld(p.yld); setSrRatio(p.srRatio ?? 100);
-    setDist(p.dist); setSpd(p.spd); setTPre(p.tPre); setTPark(p.tPark);
-    setTWlk1(p.tWlk1); setTHdwy(p.tHdwy); setTRide(p.tRide); setTWlk2(p.tWlk2); setTOvhd(p.tOvhd);
-    setWType(p.wType); setDiscount(p.discount || 0); setWageMode(p.wageMode);
-    setHrly(p.hrly); setHpw(p.hpw); setWpy(p.wpy); setAnnWage(p.annWage);
-    setSrch(p.srch); setInfl(p.infl);
-    setCapexHW(p.capexHW ?? 1000000); setCapexNRE(p.capexNRE ?? 500000);
-    setCapexInst(p.capexInst ?? 300000); setCapexOther(p.capexOther ?? 200000);
-    setCapexMargin(p.capexMargin ?? 15); setLife(p.life);
-    setOpexMode(p.opexMode ?? "move"); setOpexPM(p.opexPM ?? 0.5);
-    setOpexArea(p.opexArea ?? 500); setOpexPerM2(p.opexPerM2 ?? 5);
-    setSrGrw(p.srGrw); setProjYrs(p.projYrs);
+    if (Object.keys(COUNTRIES).includes(p.cKey)) setCKey(p.cKey);
+    setRegDays(clamp(p.regDays, 100, 300, 250));
+    setHolDays(clamp(p.holDays, 0, 100, 11));
+    setRegHrs(clamp(p.regHrs, 4, 12, 8));
+    setOtHrs(clamp(p.otHrs, 0, 6, 2));
+    setNShifts(clamp(p.nShifts, 1, 3, 2));
+    setCapa(clamp(p.capa, 1000, 2000000, 300000));
+    setYld(clamp(p.yld, 50, 100, 95));
+    setSrRatio(clamp(p.srRatio ?? 100, 1, 100, 100));
+    setDist(clamp(p.dist, 0.1, 30, 1.5));
+    setSpd(clamp(p.spd, 5, 60, 30));
+    setTPre(clamp(p.tPre, 0, 30, 2));
+    setTPark(clamp(p.tPark, 0, 20, 1.5));
+    setTWlk1(clamp(p.tWlk1, 0, 20, 3));
+    setTHdwy(clamp(p.tHdwy, 1, 60, 8));
+    setTRide(clamp(p.tRide, 1, 60, 5));
+    setTWlk2(clamp(p.tWlk2, 0, 20, 2));
+    setTOvhd(clamp(p.tOvhd, 0, 30, 3));
+    if (["fulltime","contractor","hourly"].includes(p.wType)) setWType(p.wType);
+    setDiscount(clamp(p.discount || 0, 0, 50, 0));
+    if (["hourly","annual"].includes(p.wageMode)) setWageMode(p.wageMode);
+    setHrly(clamp(p.hrly, 1, 500, 22));
+    setHpw(clamp(p.hpw, 10, 80, 40));
+    setWpy(clamp(p.wpy, 10, 52, 50));
+    setAnnWage(clamp(p.annWage, 1000, 500000, 52000));
+    setSrch(clamp(p.srch, 0, 100, 30));
+    setInfl(clamp(p.infl, 0, 30, 3));
+    setCapexHW(clamp(p.capexHW ?? 1000000, 0, 50000000, 1000000));
+    setCapexNRE(clamp(p.capexNRE ?? 500000, 0, 20000000, 500000));
+    setCapexInst(clamp(p.capexInst ?? 300000, 0, 10000000, 300000));
+    setCapexOther(clamp(p.capexOther ?? 200000, 0, 10000000, 200000));
+    setCapexMargin(clamp(p.capexMargin ?? 15, 0, 50, 15));
+    setLife(clamp(p.life, 1, 20, 7));
+    if (["move","area"].includes(p.opexMode)) setOpexMode(p.opexMode ?? "move");
+    setOpexPM(clamp(p.opexPM ?? 0.5, 0.01, 100, 0.5));
+    setOpexArea(clamp(p.opexArea ?? 500, 1, 100000, 500));
+    setOpexPerM2(clamp(p.opexPerM2 ?? 5, 0.1, 500, 5));
+    setSrGrw(clamp(p.srGrw, 0, 20, 1));
+    setProjYrs(clamp(p.projYrs, 1, 20, 7));
     setLoadedName(`${preset.brand} · ${preset.country} · ${preset.plant}`);
     setLoadedIdx(preset._idx);
     setShowList(false);
@@ -657,30 +769,25 @@ export default function App() {
     const hps = regHrs + otHrs;
     const totHrs = effDays * hps * nShifts;
     const uph = totHrs > 0 ? capa / (totHrs * (yld / 100)) : 0;
-    const mpd = capa / effDays;           // total daily moves (100% baseline)
+    const mpd = capa / effDays;
     const srCapa = capa * (srRatio / 100);
-    const mpdSR = srCapa / effDays;       // SR daily moves
-    const mpdManned = mpd - mpdSR;        // remaining manned daily moves
-
+    const mpdSR = srCapa / effDays;
+    const mpdManned = mpd - mpdSR;
     const driveT = (dist / spd) * 60;
     const waitT = tHdwy / 2;
     const cycleT = tPre + driveT + tPark + tWlk1 + waitT + tRide + tWlk2 + tOvhd;
     const tripsPS = (hps * 60) / cycleT;
-
-    // ✅ FIX 2: baseline always uses 100% CAPA for driver count
-    const totalDrvPS  = Math.ceil(mpd / (tripsPS * nShifts));   // 100% baseline drivers per shift
-    const totalDrvTot = totalDrvPS * nShifts;                    // 100% baseline total drivers
-    const drvPS       = Math.ceil(mpdSR / (tripsPS * nShifts)); // SR drivers per shift
-    const drvTot      = drvPS * nShifts;                         // SR drivers total
-    const mannedDrvPS = Math.ceil(mpdManned / (tripsPS * nShifts)); // remaining manned per shift
-    const mannedDrvTot= mannedDrvPS * nShifts;                   // remaining manned total
-
+    const totalDrvPS  = Math.ceil(mpd / (tripsPS * nShifts));
+    const totalDrvTot = totalDrvPS * nShifts;
+    const drvPS       = Math.ceil(mpdSR / (tripsPS * nShifts));
+    const drvTot      = drvPS * nShifts;
+    const mannedDrvPS = Math.ceil(mpdManned / (tripsPS * nShifts));
+    const mannedDrvTot= mannedDrvPS * nShifts;
     const hReg = regDays * regHrs;
     const hOt = regDays * otHrs;
     const hHolReg = holDays * regHrs;
     const hHolOt = holDays * otHrs;
     const totHrsP = hReg + hOt + hHolReg + hHolOt;
-
     let annBase;
     const disc = discount / 100;
     if (wageMode === "annual") {
@@ -691,16 +798,11 @@ export default function App() {
     }
     const effHrly = totHrsP > 0 ? annBase / totHrsP : 0;
     const compPP = annBase * (1 + srch / 100);
-
-    // ✅ FIX 2 핵심: baseline은 항상 100% 드라이버 기준으로 고정
-    const annLaborBaseline = totalDrvTot * compPP;   // 100% 기준 인건비 (SR ratio 무관)
-    const annLaborRemaining = mannedDrvTot * compPP; // SR 도입 후 남은 유인 인건비
-
+    const annLaborBaseline = totalDrvTot * compPP;
+    const annLaborRemaining = mannedDrvTot * compPP;
     const annDepr = capex / life;
     const annOpex = opexMode === "move" ? srCapa * opexPM : opexArea * opexPerM2 * 12;
     const annSRTot = annDepr + annOpex;
-
-    // ✅ ROI: savings = baseline labor - (remaining labor + SR cost)
     const inflR = infl / 100, srGrwR = srGrw / 100;
     let cumL = 0, cumS = 0;
     const chart = Array.from({ length: projYrs }, (_, i) => {
@@ -710,7 +812,7 @@ export default function App() {
       const opex = annOpex * Math.pow(1 + srGrwR, i);
       const depr = y <= life ? annDepr : 0;
       const srTot = opex + depr;
-      const totalCostAfterSR = laborRemaining + srTot; // 도입 후 총 비용
+      const totalCostAfterSR = laborRemaining + srTot;
       cumL += laborBaseline;
       cumS += totalCostAfterSR;
       return {
@@ -725,12 +827,10 @@ export default function App() {
         savings: Math.round(cumL - cumS),
       };
     });
-
     const bep = chart.find(r => r.savings > 0)?.year ?? "N/A";
     const finSav = chart[chart.length - 1]?.savings ?? 0;
     const roiPct = capex > 0 ? (finSav / capex) * 100 : 0;
     const yr1Savings = annLaborBaseline - (annLaborRemaining + annSRTot);
-
     return {
       effDays, totHrs, uph, mpd, srCapa, mpdSR, mpdManned,
       driveT, waitT, cycleT, tripsPS,
@@ -753,6 +853,9 @@ export default function App() {
     cumAfterSR:     lang === "ko" ? "누적 도입 후 비용"  : "Cum. After SR",
     cumSavings:     lang === "ko" ? "누적 절감액"        : "Cum. Savings",
   };
+
+  // ── Google 로그인 화면 ──
+  if (!googleUser) return <LoginScreen ready={gsiReady} />;
 
   return (
     <div className="min-h-screen bg-gray-50" style={{ fontFamily: "system-ui,sans-serif" }}>
@@ -791,20 +894,33 @@ export default function App() {
             <div className="text-blue-200 text-xs">{t.subtitle}</div>
           </div>
           <div className="ml-auto flex flex-wrap items-center gap-2">
+            <a href="https://seoulrobotics.atlassian.net/wiki/x/EAAi5"
+  target="_blank" rel="noreferrer"
+  title="Manual"
+  className="flex items-center justify-center w-8 h-8 bg-blue-800 hover:bg-blue-900 rounded-lg text-white text-base">
+  📖
+</a>
+<a href="https://sr-gate.vercel.app/"
+  title="Back to Gate"
+  className="flex items-center justify-center w-8 h-8 bg-blue-800 hover:bg-blue-900 rounded-lg text-white text-base">
+  🏠
+</a>
             <div className="flex rounded-lg overflow-hidden border border-blue-400">
-              <button onClick={() => setLang("en")}
-                className={`px-3 py-1.5 text-xs font-bold transition-colors ${lang === "en" ? "bg-white text-blue-700" : "text-blue-200 hover:bg-blue-600"}`}>EN</button>
-              <button onClick={() => setLang("ko")}
-                className={`px-3 py-1.5 text-xs font-bold transition-colors ${lang === "ko" ? "bg-white text-blue-700" : "text-blue-200 hover:bg-blue-600"}`}>한국어</button>
+              <button onClick={() => setLang("en")} className={`px-3 py-1.5 text-xs font-bold transition-colors ${lang === "en" ? "bg-white text-blue-700" : "text-blue-200 hover:bg-blue-600"}`}>EN</button>
+              <button onClick={() => setLang("ko")} className={`px-3 py-1.5 text-xs font-bold transition-colors ${lang === "ko" ? "bg-white text-blue-700" : "text-blue-200 hover:bg-blue-600"}`}>한국어</button>
             </div>
-            <button onClick={() => setShowList(true)}
-              className="flex items-center gap-1.5 bg-blue-800 hover:bg-blue-900 text-white text-xs px-3 py-1.5 rounded-lg transition-colors">
+            <button onClick={() => setShowList(true)} className="flex items-center gap-1.5 bg-blue-800 hover:bg-blue-900 text-white text-xs px-3 py-1.5 rounded-lg transition-colors">
               🏭 {t.presets} {presets.length > 0 && <span className="bg-blue-500 text-white text-xs rounded-full px-1.5">{presets.length}</span>}
             </button>
-            <button onClick={() => setShowSave(true)}
-              className="flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white text-xs px-3 py-1.5 rounded-lg transition-colors">
+            <button onClick={() => setShowSave(true)} className="flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white text-xs px-3 py-1.5 rounded-lg transition-colors">
               💾 {t.savePreset}
             </button>
+            {/* 유저 정보 + 로그아웃 */}
+            <div className="flex items-center gap-2 bg-blue-800 rounded-lg px-3 py-1.5">
+              <img src={googleUser.picture} alt="" style={{ width: 22, height: 22, borderRadius: "50%" }} />
+              <span className="text-xs text-blue-200 hidden sm:block">{googleUser.name}</span>
+              <button onClick={googleLogout} className="text-xs text-blue-300 hover:text-white border border-blue-600 rounded px-2 py-0.5 ml-1">{t.logout}</button>
+            </div>
           </div>
         </div>
         {loadedName && (
@@ -860,7 +976,6 @@ export default function App() {
               ))}
             </div>
             <div className="p-4">
-
               {tab === "prod" && <>
                 <SecHead n="1" title={t.prodTitle} sub={t.prodSub} />
                 <Row label={t.regDays}><Inp v={regDays} set={setRegDays} min={100} max={300} unit={t.days} /></Row>
@@ -899,14 +1014,14 @@ export default function App() {
                 <Row label={t.cycleOverhead} hint={t.cycleOverheadHint}><Inp v={tOvhd} set={setTOvhd} min={0} max={30} step={0.5} unit={t.min} /></Row>
                 <div className="mt-3 bg-gray-50 rounded-lg p-3 text-xs">
                   <div className="font-bold text-gray-700 mb-2">{t.cycleBreakdown}</div>
-                  <CR label={t.inspPickup}     value={`${tPre} ${t.min}`} />
-                  <CR label={t.onewayDrive}    value={`${R.driveT.toFixed(1)} ${t.min}`} />
-                  <CR label={t.parkDocs}       value={`${tPark} ${t.min}`} />
-                  <CR label={t.walkShuttle}    value={`${tWlk1} ${t.min}`} />
-                  <CR label={t.shuttleWait}    value={`${R.waitT.toFixed(1)} ${t.min}`} col="text-orange-500" />
+                  <CR label={t.inspPickup}      value={`${tPre} ${t.min}`} />
+                  <CR label={t.onewayDrive}     value={`${R.driveT.toFixed(1)} ${t.min}`} />
+                  <CR label={t.parkDocs}        value={`${tPark} ${t.min}`} />
+                  <CR label={t.walkShuttle}     value={`${tWlk1} ${t.min}`} />
+                  <CR label={t.shuttleWait}     value={`${R.waitT.toFixed(1)} ${t.min}`} col="text-orange-500" />
                   <CR label={t.shuttleRideBack} value={`${tRide} ${t.min}`} />
-                  <CR label={t.walkNextVeh}    value={`${tWlk2} ${t.min}`} />
-                  <CR label={t.overheadLabel}  value={`${tOvhd} ${t.min}`} />
+                  <CR label={t.walkNextVeh}     value={`${tWlk2} ${t.min}`} />
+                  <CR label={t.overheadLabel}   value={`${tOvhd} ${t.min}`} />
                   <div className="flex justify-between pt-2 mt-1 border-t border-gray-300 font-bold">
                     <span className="text-blue-700">{t.totalCycleTime}</span>
                     <span className="text-blue-700">{R.cycleT.toFixed(1)} {t.min}</span>
@@ -970,10 +1085,7 @@ export default function App() {
                   </div>
                 )}
                 <div className="mt-3 bg-orange-50 rounded-lg p-3 grid grid-cols-2 gap-2 text-center text-xs">
-                  <div>
-                    <div className="text-gray-500">{t.annWageP}</div>
-                    <div className="font-bold text-orange-700">{$c(R.annBase)}</div>
-                  </div>
+                  <div><div className="text-gray-500">{t.annWageP}</div><div className="font-bold text-orange-700">{$c(R.annBase)}</div></div>
                   <div>
                     <div className="text-gray-500">{t.totalCostP}</div>
                     <div className="font-bold text-orange-700">{$c(R.compPP)}</div>
@@ -1048,17 +1160,15 @@ export default function App() {
         {/* RIGHT */}
         <div className="lg:col-span-3 space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <KPI label={t.backCalcUPHkpi} value={`${R.uph.toFixed(1)}/h`}        sub={t.reqUnitsHr} />
+            <KPI label={t.backCalcUPHkpi} value={`${R.uph.toFixed(1)}/h`}         sub={t.reqUnitsHr} />
             <KPI label={t.cycleTimeKpi}   value={`${R.cycleT.toFixed(0)} ${t.min}`} sub={t.stepTotal} />
-            <KPI label={t.srDrivers}      value={c(R.drvTot)}                     sub={t.srPerShift(c(R.drvPS), nShifts, srRatio)} hi />
-            <KPI label={t.breakEven}      value={R.bep}                            sub={t.cumBEPsub} hi />
+            <KPI label={t.srDrivers}      value={c(R.drvTot)}                      sub={t.srPerShift(c(R.drvPS), nShifts, srRatio)} hi />
+            <KPI label={t.breakEven}      value={R.bep}                             sub={t.cumBEPsub} hi />
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-4">
             <div className="font-bold text-gray-700 mb-1 text-sm">{t.annualCostTitle}</div>
-            <div className="text-xs text-gray-400 mb-3">
-              {t.annualCostSub.replace("{srRatio}", srRatio).replace("{capex}", $c(capex))}
-            </div>
+            <div className="text-xs text-gray-400 mb-3">{t.annualCostSub.replace("{srRatio}", srRatio).replace("{capex}", $c(capex))}</div>
             <ResponsiveContainer width="100%" height={210}>
               <BarChart data={R.chart} margin={{ top:4, right:8, left:0, bottom:0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
