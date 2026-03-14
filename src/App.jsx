@@ -202,7 +202,7 @@ function useGoogleAuth() {
       if (r.access_token) { setDriveToken(r.access_token); resolve(r.access_token); }
       else resolve(null);
     };
-    driveClientRef.current.requestAccessToken({ prompt: "" });
+    driveClientRef.current.requestAccessToken();
   });
 
   const logout = () => {
