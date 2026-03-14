@@ -13,9 +13,18 @@ import autoTable from "jspdf-autotable";
 ChartJS.register(ArcElement, CTooltip, CLegend, CategoryScale, LinearScale, BarElement, Title, PointElement, LineElement, Filler, RadialLinearScale);
 
 // ── Version & Changelog ────────────────────────────────
-const VERSION = "v1.9.1";
+const VERSION = "v1.9.2";
 const BUILD_DATE = "2026-03-14";
 const CHANGELOG = [
+  {
+    version: "v1.9.2", date: "2026-03-14",
+    en: ["Report/Quotation: 💾 Save to Google Drive button (auto-folder 'SR ATI ROI Reports')",
+         "Added Department field to Internal Report & Quotation forms",
+         "PDF includes Department in Project Info / Quote Details"],
+    ko: ["리포트/견적서: 💾 Google Drive 저장 버튼 ('SR ATI ROI Reports' 폴더 자동 생성)",
+         "내부 보고용 / 견적서 폼에 부서 필드 추가",
+         "PDF에 부서 정보 포함 (프로젝트 정보 / 견적 세부사항)"],
+  },
   {
     version: "v1.9.1", date: "2026-03-14",
     en: ["Mobile: all modal widths now responsive (min(width, 92vw))",
@@ -143,7 +152,9 @@ const CLIENT_ID = "318386102464-2bavuh812hpk4gsegb5tkvrsnhartsm9.apps.googleuser
 const ALLOWED_DOMAIN = "seoulrobotics.org";
 const SHEET_ID = "1drJd-Ete7ANEzhNliihFboZ4v8d4jngD9U_fTAjy71s";
 const SHEET_NAME = "Presets";
-const SHEETS_SCOPE = "https://www.googleapis.com/auth/spreadsheets";
+const SHEETS_SCOPE = "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive";
+const DRIVE_FOLDER_NAME = "SR ATI ROI Reports";
+const SHARED_DRIVE_ID = "0AEhuFnmNRVDCUk9PVA";
 
 function useGoogleAuth() {
   const [user, setUser] = useState(null);
@@ -513,6 +524,9 @@ const T = {
     salesRepPh: "e.g. Jane Lee",
     validityDays: "Quote Validity (days)",
     downloadQuotation: "⬇ Download Quotation",
+    saveToDrive: "Drive",
+    savedToDrive: "Saved to Google Drive ✓",
+    saveToDriveFail: "Drive save failed — please re-login",
     // Toast (sheets)
     sheetsLoadFail: "Sheets load failed — using local data",
     sheetsRefreshFail: "Sheets refresh failed",
@@ -792,6 +806,9 @@ const T = {
     salesRepPh: "예: 이영희",
     validityDays: "견적 유효기간 (일)",
     downloadQuotation: "⬇ 견적서 PDF 다운로드",
+    saveToDrive: "Drive",
+    savedToDrive: "Google Drive에 저장됨 ✓",
+    saveToDriveFail: "Drive 저장 실패 — 재로그인 필요",
     // Toast (sheets)
     sheetsLoadFail: "Sheets 로드 실패 — 로컬 데이터 사용",
     sheetsRefreshFail: "Sheets 새로고침 실패",
@@ -885,6 +902,39 @@ async function sheetsDeleteRow(token, rowIndex) {
     }),
   });
   if (!res.ok) throw new Error("Sheets delete failed");
+}
+
+// ── Google Drive helpers ────────────────────────────────
+async function getDriveFolderId(token) {
+  const q = encodeURIComponent(`name='${DRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false and '${SHARED_DRIVE_ID}' in parents`);
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)&supportsAllDrives=true&includeItemsFromAllDrives=true&driveId=${SHARED_DRIVE_ID}&corpora=drive`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  if (!res.ok) throw new Error("Drive folder search failed");
+  const data = await res.json();
+  if (data.files?.length > 0) return data.files[0].id;
+  const createRes = await fetch("https://www.googleapis.com/drive/v3/files?supportsAllDrives=true", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ name: DRIVE_FOLDER_NAME, mimeType: "application/vnd.google-apps.folder", parents: [SHARED_DRIVE_ID] }),
+  });
+  if (!createRes.ok) throw new Error("Drive folder creation failed");
+  return (await createRes.json()).id;
+}
+
+async function uploadToDrive(token, blob, fileName) {
+  const folderId = await getDriveFolderId(token);
+  const metadata = { name: fileName, mimeType: "application/pdf", parents: [folderId] };
+  const form = new FormData();
+  form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
+  form.append("file", blob);
+  const res = await fetch(
+    "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink&supportsAllDrives=true",
+    { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form }
+  );
+  if (!res.ok) throw new Error("Drive upload failed");
+  return await res.json();
 }
 
 const clamp = (v, min, max, fallback) => { const n = Number(v); return (isNaN(n) || !isFinite(n)) ? fallback : Math.min(Math.max(n, min), max); };
@@ -1121,9 +1171,10 @@ function ChangelogModal({ onClose, lang }) {
 
 function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexInst, capexOther,
   capexBase, capexAfterOverhead, capexAfterMargin, capexOverhead, capexMargin, capexDiscount,
-  opexMode, opexArea, life, projYrs, loadedName, googleUser, hwConfig, hwCounts, sites }) {
+  opexMode, opexArea, life, projYrs, loadedName, googleUser, hwConfig, hwCounts, sites, accessToken }) {
   const [mode, setMode] = useState("internal");
   const [author, setAuthor] = useState(googleUser?.name || "");
+  const [dept, setDept] = useState("");
   const [client, setClient] = useState("");
   const [project, setProject] = useState(loadedName || "");
   const [notes, setNotes] = useState("");
@@ -1131,7 +1182,7 @@ function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexI
   const [salesRep, setSalesRep] = useState(googleUser?.name || "");
   const [validDays, setValidDays] = useState(30);
 
-  const generatePdf = () => {
+  const buildInternalPdf = () => {
     const doc = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
     const now = new Date();
     const dateStr = now.toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
@@ -1163,6 +1214,7 @@ function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexI
       columnStyles:{0:{fontStyle:"bold",textColor:[100,100,100],cellWidth:45},1:{textColor:[30,30,30]}},
       body:[
         ["Author", author || "—"],
+        ...(dept ? [["Department", dept]] : []),
         ["Client / OEM", client || "—"],
         ["Project / Plant", project || "—"],
         ...(notes ? [["Notes", notes]] : []),
@@ -1256,10 +1308,11 @@ function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexI
       doc.text(`Page ${i} / ${pageCount}`, W-M, 292, {align:"right"});
     }
     const fileName = `SR-ROI-Report_${(client||project||"export").replace(/[^a-zA-Z0-9]/g,"_")}_${now.toISOString().slice(0,10)}.pdf`;
-    doc.save(fileName);
+    return { doc, fileName };
   };
+  const generatePdf = () => { const { doc, fileName } = buildInternalPdf(); doc.save(fileName); };
 
-  const generateQuotationPdf = () => {
+  const buildQuotationPdf = () => {
     const doc = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
     const now = new Date();
     const dateStr = now.toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
@@ -1297,6 +1350,7 @@ function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexI
       ["Date", dateStr],
       ["Valid Until", validDate],
       ["Prepared by", salesRep||"—"],
+      ...(dept ? [["Department", dept]] : []),
     ];
     metaRows.forEach(([k,v], i) => {
       doc.setFont("helvetica","bold"); doc.setTextColor(80,80,80);
@@ -1472,7 +1526,23 @@ function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexI
       doc.text(`Page ${i} / ${pageCount}`, W-M, 291, {align:"right"});
     }
     const fileName = `SR-Quotation_${(client||"Client").replace(/[^a-zA-Z0-9]/g,"_")}_${now.toISOString().slice(0,10)}.pdf`;
-    doc.save(fileName);
+    return { doc, fileName };
+  };
+  const generateQuotationPdf = () => { const { doc, fileName } = buildQuotationPdf(); doc.save(fileName); };
+
+  const [driveLoading, setDriveLoading] = useState(null);
+  const saveToDriveHandler = async (m) => {
+    if (!accessToken) return;
+    setDriveLoading(m);
+    try {
+      const { doc, fileName } = m === "internal" ? buildInternalPdf() : buildQuotationPdf();
+      await uploadToDrive(accessToken, doc.output("blob"), fileName);
+      setDriveLoading("done");
+      setTimeout(() => setDriveLoading(null), 3000);
+    } catch {
+      setDriveLoading("error");
+      setTimeout(() => setDriveLoading(null), 3000);
+    }
   };
 
   return (
@@ -1507,6 +1577,7 @@ function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexI
             </div>
             {[
               [t.name, author, setAuthor, t.reportAuthorPh],
+              [t.dept, dept, setDept, t.deptPh],
               [t.brandOEM, client, setClient, t.reportClientPh],
               [t.plant, project, setProject, t.reportProjectPh],
             ].map(([lbl,val,set,ph]) => (
@@ -1538,6 +1609,7 @@ function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexI
               [t.plant, project, setProject, t.reportProjectPh],
               [t.contactPerson, contactPerson, setContactPerson, t.contactPersonPh],
               [t.salesRep, salesRep, setSalesRep, t.salesRepPh],
+              [t.dept, dept, setDept, t.deptPh],
             ].map(([lbl,val,set,ph]) => (
               <div key={lbl}>
                 <div className="text-xs text-gray-500 mb-1 font-medium">{lbl}</div>
@@ -1563,12 +1635,23 @@ function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexI
             </div>
           </>}
         </div>
-        <div className="p-4 border-t border-gray-100 flex gap-2">
-          <button onClick={onClose} className="flex-1 border border-gray-300 rounded-lg py-2 text-sm text-gray-600 hover:bg-gray-50">{t.reportClose}</button>
-          {mode === "internal"
-            ? <button onClick={generatePdf} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg py-2 text-sm font-semibold">{t.downloadPdf}</button>
-            : <button onClick={generateQuotationPdf} className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg py-2 text-sm font-semibold">{t.downloadQuotation}</button>
-          }
+        <div className="p-4 border-t border-gray-100 space-y-2">
+          <div className="flex gap-2">
+            {mode === "internal"
+              ? <button onClick={generatePdf} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg py-2 text-sm font-semibold">{t.downloadPdf}</button>
+              : <button onClick={generateQuotationPdf} className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg py-2 text-sm font-semibold">{t.downloadQuotation}</button>
+            }
+            {accessToken && (
+              <button onClick={() => saveToDriveHandler(mode)}
+                disabled={driveLoading === mode || driveLoading === "done" || driveLoading === "error"}
+                className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white rounded-lg py-2 text-sm font-semibold">
+                {driveLoading === mode ? "⏳" : driveLoading === "done" ? "✅" : "💾"} {t.saveToDrive}
+              </button>
+            )}
+          </div>
+          {driveLoading === "done" && <div className="text-xs text-green-600 text-center">{t.savedToDrive}</div>}
+          {driveLoading === "error" && <div className="text-xs text-red-500 text-center">{t.saveToDriveFail}</div>}
+          <button onClick={onClose} className="w-full border border-gray-300 rounded-lg py-2 text-sm text-gray-600 hover:bg-gray-50">{t.reportClose}</button>
         </div>
       </div>
     </div>
@@ -1997,6 +2080,7 @@ export default function App() {
           opexMode={opexMode} opexArea={opexArea} life={life} projYrs={projYrs}
           loadedName={loadedName} googleUser={googleUser}
           hwConfig={hwConfig} hwCounts={hwCounts} sites={sites}
+          accessToken={accessToken}
         />
       )}
 
