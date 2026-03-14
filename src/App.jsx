@@ -1310,7 +1310,8 @@ function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexI
       doc.text(`SR ATI ROI Calculator ${VERSION}  ·  Confidential`, M, 292);
       doc.text(`Page ${i} / ${pageCount}`, W-M, 292, {align:"right"});
     }
-    const fileName = `SR-ROI-Report_${(client||project||"export").replace(/[^a-zA-Z0-9]/g,"_")}_${now.toISOString().slice(0,10)}.pdf`;
+    const safe = (s) => (s||"").replace(/[^a-zA-Z0-9가-힣]/g,"_");
+    const fileName = `SR-ROI-Report_${safe(client||project||"export")}_${safe(author)}_${now.toISOString().slice(0,10)}.pdf`;
     return { doc, fileName };
   };
   const generatePdf = () => { const { doc, fileName } = buildInternalPdf(); doc.save(fileName); };
@@ -1528,7 +1529,8 @@ function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexI
       doc.text(`SEOULROBOTICS  ·  Commercial Quotation  ·  ${quoteNo}  ·  Confidential`, M, 291);
       doc.text(`Page ${i} / ${pageCount}`, W-M, 291, {align:"right"});
     }
-    const fileName = `SR-Quotation_${(client||"Client").replace(/[^a-zA-Z0-9]/g,"_")}_${now.toISOString().slice(0,10)}.pdf`;
+    const safe = (s) => (s||"").replace(/[^a-zA-Z0-9가-힣]/g,"_");
+    const fileName = `SR-Quotation_${safe(client||"Client")}_${safe(salesRep)}_${now.toISOString().slice(0,10)}.pdf`;
     return { doc, fileName };
   };
   const generateQuotationPdf = () => { const { doc, fileName } = buildQuotationPdf(); doc.save(fileName); };
