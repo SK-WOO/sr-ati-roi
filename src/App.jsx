@@ -928,7 +928,10 @@ async function getOrCreateDriveFolder(token) {
   const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) throw new Error("folder search failed");
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(`folder search ${res.status} — ${e?.error?.message || "unknown"}`);
+  }
   const { files } = await res.json();
   if (files?.length > 0) return files[0].id;
   const createRes = await fetch("https://www.googleapis.com/drive/v3/files", {
@@ -936,7 +939,10 @@ async function getOrCreateDriveFolder(token) {
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify({ name: DRIVE_FOLDER_NAME, mimeType: "application/vnd.google-apps.folder" }),
   });
-  if (!createRes.ok) throw new Error("folder creation failed");
+  if (!createRes.ok) {
+    const e = await createRes.json().catch(() => ({}));
+    throw new Error(`folder create ${createRes.status} — ${e?.error?.message || "unknown"}`);
+  }
   return (await createRes.json()).id;
 }
 
