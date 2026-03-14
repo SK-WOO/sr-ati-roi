@@ -913,16 +913,27 @@ async function getDriveFolderId(token) {
     `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)&supportsAllDrives=true&includeItemsFromAllDrives=true&driveId=${SHARED_DRIVE_ID}&corpora=drive`,
     { headers: { Authorization: `Bearer ${token}` } }
   );
-  if (!res.ok) throw new Error("Drive folder search failed");
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    console.error("[Drive] folder search failed:", res.status, err);
+    throw new Error(`Drive folder search failed: ${res.status} ${JSON.stringify(err)}`);
+  }
   const data = await res.json();
+  console.log("[Drive] folder search result:", data);
   if (data.files?.length > 0) return data.files[0].id;
   const createRes = await fetch("https://www.googleapis.com/drive/v3/files?supportsAllDrives=true", {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify({ name: DRIVE_FOLDER_NAME, mimeType: "application/vnd.google-apps.folder", parents: [SHARED_DRIVE_ID] }),
   });
-  if (!createRes.ok) throw new Error("Drive folder creation failed");
-  return (await createRes.json()).id;
+  if (!createRes.ok) {
+    const err = await createRes.json().catch(() => ({}));
+    console.error("[Drive] folder creation failed:", createRes.status, err);
+    throw new Error(`Drive folder creation failed: ${createRes.status} ${JSON.stringify(err)}`);
+  }
+  const folder = await createRes.json();
+  console.log("[Drive] folder created:", folder);
+  return folder.id;
 }
 
 async function uploadToDrive(token, blob, fileName) {
@@ -935,7 +946,11 @@ async function uploadToDrive(token, blob, fileName) {
     "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink&supportsAllDrives=true",
     { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form }
   );
-  if (!res.ok) throw new Error("Drive upload failed");
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    console.error("[Drive] upload failed:", res.status, err);
+    throw new Error(`Drive upload failed: ${res.status} ${JSON.stringify(err)}`);
+  }
   return await res.json();
 }
 
@@ -1545,7 +1560,8 @@ function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexI
       await uploadToDrive(accessToken, doc.output("blob"), fileName);
       setDriveLoading("done");
       setTimeout(() => setDriveLoading(null), 3000);
-    } catch {
+    } catch (e) {
+      console.error("[Drive] upload error:", e);
       setDriveLoading("error");
       setTimeout(() => setDriveLoading(null), 3000);
     }
