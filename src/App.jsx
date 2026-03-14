@@ -13,9 +13,20 @@ import autoTable from "jspdf-autotable";
 ChartJS.register(ArcElement, CTooltip, CLegend, CategoryScale, LinearScale, BarElement, Title, PointElement, LineElement, Filler, RadialLinearScale);
 
 // ── Version & Changelog ────────────────────────────────
-const VERSION = "v1.8.1";
-const BUILD_DATE = "2026-03-13";
+const VERSION = "v1.9.0";
+const BUILD_DATE = "2026-03-14";
 const CHANGELOG = [
+  {
+    version: "v1.9.0", date: "2026-03-14",
+    en: ["Report split into two modes: Internal Report & Customer Quotation",
+         "Quotation PDF: cover page, HW BOM, step-by-step pricing, ROI highlights, T&Cs",
+         "Quote No. auto-generated (QT-YYYYMMDD-HHMM), configurable validity period",
+         "New fields: Contact Person, SR Sales Rep"],
+    ko: ["리포트 2모드 분리: 내부 보고용 / 고객 견적서",
+         "견적서 PDF: 커버, HW BOM, 단계별 가격, ROI 하이라이트, 조건",
+         "견적 번호 자동생성 (QT-YYYYMMDD-HHMM), 유효기간 설정",
+         "신규 필드: 고객 담당자, SR 영업 담당"],
+  },
   {
     version: "v1.8.1", date: "2026-03-13",
     en: ["UI/visibility fixes: tab overflow, KPI text, CR layout, ROI table",
