@@ -152,14 +152,17 @@ const CLIENT_ID = "318386102464-2bavuh812hpk4gsegb5tkvrsnhartsm9.apps.googleuser
 const ALLOWED_DOMAIN = "seoulrobotics.org";
 const SHEET_ID = "1drJd-Ete7ANEzhNliihFboZ4v8d4jngD9U_fTAjy71s";
 const SHEET_NAME = "Presets";
-const SHEETS_SCOPE = "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file";
+const SHEETS_SCOPE = "https://www.googleapis.com/auth/spreadsheets";
+const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 const DRIVE_FOLDER_NAME = "SR ATI ROI Reports";
 
 function useGoogleAuth() {
   const [user, setUser] = useState(null);
   const [ready, setReady] = useState(false);
   const [accessToken, setAccessToken] = useState(null);
-  const tokenClientRef = useRef(null);
+  const [driveToken, setDriveToken] = useState(null);
+  const sheetsClientRef = useRef(null);
+  const driveClientRef = useRef(null);
 
   useEffect(() => {
     const script = document.createElement("script");
@@ -174,16 +177,19 @@ function useGoogleAuth() {
             const p = JSON.parse(atob(res.credential.split(".")[1]));
             if (!p.email?.endsWith(`@${ALLOWED_DOMAIN}`)) return;
             setUser({ name: p.name, email: p.email, picture: p.picture });
-            tokenClientRef.current?.requestAccessToken({ prompt: "" });
+            sheetsClientRef.current?.requestAccessToken({ prompt: "" });
           } catch {}
         },
       });
-      tokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
+      sheetsClientRef.current = window.google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SHEETS_SCOPE,
-        callback: (tokenResponse) => {
-          if (tokenResponse.access_token) setAccessToken(tokenResponse.access_token);
-        },
+        callback: (r) => { if (r.access_token) setAccessToken(r.access_token); },
+      });
+      driveClientRef.current = window.google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: DRIVE_SCOPE,
+        callback: (r) => { if (r.access_token) setDriveToken(r.access_token); },
       });
       setReady(true);
     };
@@ -191,12 +197,21 @@ function useGoogleAuth() {
     return () => document.head.removeChild(script);
   }, []);
 
+  const requestDriveToken = () => new Promise((resolve) => {
+    driveClientRef.current.callback = (r) => {
+      if (r.access_token) { setDriveToken(r.access_token); resolve(r.access_token); }
+      else resolve(null);
+    };
+    driveClientRef.current.requestAccessToken({ prompt: "" });
+  });
+
   const logout = () => {
     if (window.google) window.google.accounts.id.disableAutoSelect();
     setUser(null);
     setAccessToken(null);
+    setDriveToken(null);
   };
-  return { user, ready, logout, accessToken };
+  return { user, ready, logout, accessToken, driveToken, requestDriveToken };
 }
 
 function LoginScreen({ ready }) {
@@ -1173,7 +1188,8 @@ function ChangelogModal({ onClose, lang }) {
 
 function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexInst, capexOther,
   capexBase, capexAfterOverhead, capexAfterMargin, capexOverhead, capexMargin, capexDiscount,
-  opexMode, opexArea, life, projYrs, loadedName, googleUser, hwConfig, hwCounts, sites, accessToken }) {
+  opexMode, opexArea, life, projYrs, loadedName, googleUser, hwConfig, hwCounts, sites,
+  driveToken, requestDriveToken }) {
   const [mode, setMode] = useState("internal");
   const [author, setAuthor] = useState(googleUser?.name || "");
   const [dept, setDept] = useState("");
@@ -1534,15 +1550,12 @@ function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexI
 
   const [driveLoading, setDriveLoading] = useState(null);
   const saveToDriveHandler = async (m) => {
-    if (!accessToken) {
-      setDriveLoading("noauth");
-      setTimeout(() => setDriveLoading(null), 4000);
-      return;
-    }
     setDriveLoading(m);
     try {
+      const token = driveToken || await requestDriveToken();
+      if (!token) { setDriveLoading("noauth"); setTimeout(() => setDriveLoading(null), 4000); return; }
       const { doc, fileName } = m === "internal" ? buildInternalPdf() : buildQuotationPdf();
-      await uploadToDrive(accessToken, doc.output("blob"), fileName);
+      await uploadToDrive(token, doc.output("blob"), fileName);
       setDriveLoading("done");
       setTimeout(() => setDriveLoading(null), 3000);
     } catch (e) {
@@ -1667,7 +1680,7 @@ function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexI
 
 export default function App() {
   // ── Google Auth ──
-  const { user: googleUser, ready: gsiReady, logout: googleLogout, accessToken } = useGoogleAuth();
+  const { user: googleUser, ready: gsiReady, logout: googleLogout, accessToken, driveToken, requestDriveToken } = useGoogleAuth();
 
   const [lang, setLang] = useState("en");
   const t = T[lang];
@@ -2087,7 +2100,7 @@ export default function App() {
           opexMode={opexMode} opexArea={opexArea} life={life} projYrs={projYrs}
           loadedName={loadedName} googleUser={googleUser}
           hwConfig={hwConfig} hwCounts={hwCounts} sites={sites}
-          accessToken={accessToken}
+          driveToken={driveToken} requestDriveToken={requestDriveToken}
         />
       )}
 
