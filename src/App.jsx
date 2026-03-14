@@ -1690,15 +1690,14 @@ export default function App() {
   const [opexDiscount1, setOpexDiscount1] = useState(30);
   const [opexDiscountStep, setOpexDiscountStep] = useState(3);
 
-  // ── Pricing Calc tab state (캐시에서 복원) ──
-  const _calcCache = loadCalcCache();
-  const [sites, setSites] = useState(_calcCache?.sites || [
+  // ── Pricing Calc tab state (캐시에서 복원 — lazy initializer로 최초 1회만 읽음) ──
+  const [sites, setSites] = useState(() => loadCalcCache()?.sites || [
     { id: 1, name: "Site 1", type: "area", pathLen: 0, width: 40, height: 35,
       diff: { outdoor:0, elevation:0, roadWidth:0.1, surface:0, complexity:0.1, paved:0, capacity:0.1 } },
   ]);
-  const [hwConfig, setHwConfig] = useState(_calcCache?.hwConfig || DEFAULT_HW_CONFIG);
-  const [hwCounts, setHwCounts] = useState(_calcCache?.hwCounts || { xt32:6, ot128:0, qt128:0, zt128:0, server:0, etc:6 });
-  const [annThruput, setAnnThruput] = useState(_calcCache?.annThruput || 300000);
+  const [hwConfig, setHwConfig] = useState(() => loadCalcCache()?.hwConfig || DEFAULT_HW_CONFIG);
+  const [hwCounts, setHwCounts] = useState(() => loadCalcCache()?.hwCounts || { xt32:6, ot128:0, qt128:0, zt128:0, server:0, etc:6 });
+  const [annThruput, setAnnThruput] = useState(() => loadCalcCache()?.annThruput || 300000);
   const [hwPresets, setHwPresets] = useState(() => loadHwPresets());
   const [hwPresetName, setHwPresetName] = useState("");
   const [showReport, setShowReport] = useState(false);
@@ -2393,7 +2392,7 @@ export default function App() {
                 <div className="flex gap-2 mb-3">
                   <button onClick={() => { const id=`custom_${Date.now()}`; setHwConfig([...hwConfig,{id,brand:"",label:"Custom HW",price:0}]); setHwCounts({...hwCounts,[id]:0}); }}
                     className="text-xs text-blue-500 border border-blue-200 rounded-lg px-2 py-1 hover:bg-blue-50">{t.addHwItem}</button>
-                  <button onClick={() => { setHwConfig(DEFAULT_HW_CONFIG); setHwCounts({ xt32:6, ot128:0, qt128:0, zt128:0, server:0, etc:6 }); }}
+                  <button onClick={() => { const def = { xt32:6, ot128:0, qt128:0, zt128:0, server:0, etc:6 }; setHwConfig(DEFAULT_HW_CONFIG); setHwCounts(def); saveCalcCache({ sites, hwConfig: DEFAULT_HW_CONFIG, hwCounts: def, annThruput }); }}
                     className="text-xs text-gray-400 border border-gray-200 rounded-lg px-2 py-1 hover:bg-gray-50">{t.resetHwDefault}</button>
                 </div>
                 {/* HW Config Presets */}
