@@ -527,6 +527,7 @@ const T = {
     saveToDrive: "Drive",
     savedToDrive: "Saved to Google Drive ✓",
     saveToDriveFail: "Drive save failed — please re-login",
+    saveToDriveNoAuth: "Drive access not granted — please logout and re-login",
     // Toast (sheets)
     sheetsLoadFail: "Sheets load failed — using local data",
     sheetsRefreshFail: "Sheets refresh failed",
@@ -809,6 +810,7 @@ const T = {
     saveToDrive: "Drive",
     savedToDrive: "Google Drive에 저장됨 ✓",
     saveToDriveFail: "Drive 저장 실패 — 재로그인 필요",
+    saveToDriveNoAuth: "Drive 권한 없음 — 로그아웃 후 재로그인 해주세요",
     // Toast (sheets)
     sheetsLoadFail: "Sheets 로드 실패 — 로컬 데이터 사용",
     sheetsRefreshFail: "Sheets 새로고침 실패",
@@ -1532,7 +1534,11 @@ function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexI
 
   const [driveLoading, setDriveLoading] = useState(null);
   const saveToDriveHandler = async (m) => {
-    if (!accessToken) return;
+    if (!accessToken) {
+      setDriveLoading("noauth");
+      setTimeout(() => setDriveLoading(null), 4000);
+      return;
+    }
     setDriveLoading(m);
     try {
       const { doc, fileName } = m === "internal" ? buildInternalPdf() : buildQuotationPdf();
@@ -1641,16 +1647,15 @@ function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexI
               ? <button onClick={generatePdf} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg py-2 text-sm font-semibold">{t.downloadPdf}</button>
               : <button onClick={generateQuotationPdf} className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg py-2 text-sm font-semibold">{t.downloadQuotation}</button>
             }
-            {accessToken && (
-              <button onClick={() => saveToDriveHandler(mode)}
-                disabled={driveLoading === mode || driveLoading === "done" || driveLoading === "error"}
-                className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white rounded-lg py-2 text-sm font-semibold">
-                {driveLoading === mode ? "⏳" : driveLoading === "done" ? "✅" : "💾"} {t.saveToDrive}
-              </button>
-            )}
+            <button onClick={() => saveToDriveHandler(mode)}
+              disabled={driveLoading === mode || driveLoading === "done"}
+              className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white rounded-lg py-2 text-sm font-semibold">
+              {driveLoading === mode ? "⏳" : driveLoading === "done" ? "✅" : "💾"} {t.saveToDrive}
+            </button>
           </div>
           {driveLoading === "done" && <div className="text-xs text-green-600 text-center">{t.savedToDrive}</div>}
           {driveLoading === "error" && <div className="text-xs text-red-500 text-center">{t.saveToDriveFail}</div>}
+          {driveLoading === "noauth" && <div className="text-xs text-orange-500 text-center">{t.saveToDriveNoAuth}</div>}
           <button onClick={onClose} className="w-full border border-gray-300 rounded-lg py-2 text-sm text-gray-600 hover:bg-gray-50">{t.reportClose}</button>
         </div>
       </div>
