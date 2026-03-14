@@ -923,8 +923,26 @@ async function sheetsDeleteRow(token, rowIndex) {
 }
 
 // ── Google Drive helpers ────────────────────────────────
+async function getOrCreateDriveFolder(token) {
+  const q = encodeURIComponent(`name='${DRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error("folder search failed");
+  const { files } = await res.json();
+  if (files?.length > 0) return files[0].id;
+  const createRes = await fetch("https://www.googleapis.com/drive/v3/files", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ name: DRIVE_FOLDER_NAME, mimeType: "application/vnd.google-apps.folder" }),
+  });
+  if (!createRes.ok) throw new Error("folder creation failed");
+  return (await createRes.json()).id;
+}
+
 async function uploadToDrive(token, blob, fileName) {
-  const metadata = { name: fileName, mimeType: "application/pdf" };
+  const folderId = await getOrCreateDriveFolder(token);
+  const metadata = { name: fileName, mimeType: "application/pdf", parents: [folderId] };
   const form = new FormData();
   form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
   form.append("file", blob);
