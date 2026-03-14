@@ -923,26 +923,8 @@ async function sheetsDeleteRow(token, rowIndex) {
 }
 
 // ── Google Drive helpers ────────────────────────────────
-async function getOrCreateDriveFolder(token) {
-  const q = encodeURIComponent(`name='${DRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
-  const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error("folder search failed");
-  const data = await res.json();
-  if (data.files?.length > 0) return data.files[0].id;
-  const createRes = await fetch("https://www.googleapis.com/drive/v3/files", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ name: DRIVE_FOLDER_NAME, mimeType: "application/vnd.google-apps.folder" }),
-  });
-  if (!createRes.ok) throw new Error("folder creation failed");
-  return (await createRes.json()).id;
-}
-
 async function uploadToDrive(token, blob, fileName) {
-  const folderId = await getOrCreateDriveFolder(token);
-  const metadata = { name: fileName, mimeType: "application/pdf", parents: [folderId] };
+  const metadata = { name: fileName, mimeType: "application/pdf" };
   const form = new FormData();
   form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
   form.append("file", blob);
@@ -950,7 +932,10 @@ async function uploadToDrive(token, blob, fileName) {
     "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name",
     { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form }
   );
-  if (!res.ok) throw new Error("upload failed");
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`${res.status} — ${err?.error?.message || "unknown"}`);
+  }
   return await res.json();
 }
 
@@ -1549,19 +1534,20 @@ function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexI
   const generateQuotationPdf = () => { const { doc, fileName } = buildQuotationPdf(); doc.save(fileName); };
 
   const [driveLoading, setDriveLoading] = useState(null);
+  const [driveError, setDriveError] = useState(null);
   const saveToDriveHandler = async (m) => {
     setDriveLoading(m);
+    setDriveError(null);
     try {
       const token = driveToken || await requestDriveToken();
-      if (!token) { setDriveLoading("noauth"); setTimeout(() => setDriveLoading(null), 4000); return; }
+      if (!token) { setDriveLoading("noauth"); setTimeout(() => setDriveLoading(null), 6000); return; }
       const { doc, fileName } = m === "internal" ? buildInternalPdf() : buildQuotationPdf();
       await uploadToDrive(token, doc.output("blob"), fileName);
       setDriveLoading("done");
       setTimeout(() => setDriveLoading(null), 3000);
     } catch (e) {
-      console.error("[Drive] upload error:", e);
+      setDriveError(e.message);
       setDriveLoading("error");
-      setTimeout(() => setDriveLoading(null), 3000);
     }
   };
 
@@ -1668,7 +1654,7 @@ function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexI
             </button>
           </div>
           {driveLoading === "done" && <div className="text-xs text-green-600 text-center">{t.savedToDrive}</div>}
-          {driveLoading === "error" && <div className="text-xs text-red-500 text-center">{t.saveToDriveFail}</div>}
+          {driveLoading === "error" && <div className="text-xs text-red-500 text-center">{t.saveToDriveFail}{driveError ? ` (${driveError})` : ""}</div>}
           {driveLoading === "noauth" && <div className="text-xs text-orange-500 text-center">{t.saveToDriveNoAuth}</div>}
           {!driveLoading && <div className="text-xs text-gray-400 text-center">{t.saveToDriveHint}</div>}
           <button onClick={onClose} className="w-full border border-gray-300 rounded-lg py-2 text-sm text-gray-600 hover:bg-gray-50">{t.reportClose}</button>
