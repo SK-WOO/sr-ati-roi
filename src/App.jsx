@@ -153,8 +153,8 @@ const ALLOWED_DOMAIN = "seoulrobotics.org";
 const SHEET_ID = "1drJd-Ete7ANEzhNliihFboZ4v8d4jngD9U_fTAjy71s";
 const SHEET_NAME = "Presets";
 const SHEETS_SCOPE = "https://www.googleapis.com/auth/spreadsheets";
-const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
-const DRIVE_FOLDER_NAME = "SR ATI ROI Reports";
+const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive";
+const DRIVE_FOLDER_ID = "1CBJSurqLXL2LqBIZVYiIyxJ5BaNLkhn_"; // Shared Drive: SR ATI ROI Reports
 
 function useGoogleAuth() {
   const [user, setUser] = useState(null);
@@ -542,7 +542,7 @@ const T = {
     savedToDrive: "Saved to Google Drive ✓",
     saveToDriveFail: "Drive save failed — please re-login",
     saveToDriveNoAuth: "Drive access not granted — please logout and re-login",
-    saveToDriveHint: "💡 Saved to your personal Google Drive (My Drive)",
+    saveToDriveHint: "💡 Saved to Seoul Robotics Shared Drive → SR ATI ROI Reports",
     // Toast (sheets)
     sheetsLoadFail: "Sheets load failed — using local data",
     sheetsRefreshFail: "Sheets refresh failed",
@@ -826,7 +826,7 @@ const T = {
     savedToDrive: "Google Drive에 저장됨 ✓",
     saveToDriveFail: "Drive 저장 실패 — 재로그인 필요",
     saveToDriveNoAuth: "Drive 권한 없음 — 로그아웃 후 재로그인 해주세요",
-    saveToDriveHint: "💡 내 Google Drive (My Drive)에 저장됩니다",
+    saveToDriveHint: "💡 Seoul Robotics 공유 드라이브 → SR ATI ROI Reports 폴더에 저장됩니다",
     // Toast (sheets)
     sheetsLoadFail: "Sheets 로드 실패 — 로컬 데이터 사용",
     sheetsRefreshFail: "Sheets 새로고침 실패",
@@ -924,12 +924,12 @@ async function sheetsDeleteRow(token, rowIndex) {
 
 // ── Google Drive helpers ────────────────────────────────
 async function uploadToDrive(token, blob, fileName) {
-  const metadata = { name: fileName, mimeType: "application/pdf" };
+  const metadata = { name: fileName, mimeType: "application/pdf", parents: [DRIVE_FOLDER_ID] };
   const form = new FormData();
   form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
   form.append("file", blob);
   const res = await fetch(
-    "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name",
+    "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name&supportsAllDrives=true",
     { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form }
   );
   if (!res.ok) {
