@@ -13,9 +13,20 @@ import autoTable from "jspdf-autotable";
 ChartJS.register(ArcElement, CTooltip, CLegend, CategoryScale, LinearScale, BarElement, Title, PointElement, LineElement, Filler, RadialLinearScale);
 
 // ── Version & Changelog ────────────────────────────────
-const VERSION = "v1.9.0";
+const VERSION = "v1.9.1";
 const BUILD_DATE = "2026-03-14";
 const CHANGELOG = [
+  {
+    version: "v1.9.1", date: "2026-03-14",
+    en: ["Mobile: all modal widths now responsive (min(width, 92vw))",
+         "Touch targets enlarged (logout, update, tab, site card buttons)",
+         "Tab font 10px → 11px, HW Config header 12px",
+         "Pricing Calc state (sites/HW) now auto-saved to localStorage"],
+    ko: ["모바일: 모든 모달 너비 반응형 적용 (min(width, 92vw))",
+         "터치 타깃 확대 (로그아웃, 업데이트, 탭, 사이트 카드 버튼)",
+         "탭 폰트 10px → 11px, HW Config 헤더 12px",
+         "Pricing Calc 상태 (사이트/HW) localStorage 자동 저장"],
+  },
   {
     version: "v1.9.0", date: "2026-03-14",
     en: ["Report split into two modes: Internal Report & Customer Quotation",
@@ -889,6 +900,9 @@ const DEFAULT_HW_CONFIG = [
 const HW_PRESET_KEY = "sr-hw-presets-v1";
 function loadHwPresets() { try { const r = localStorage.getItem(HW_PRESET_KEY); return r ? JSON.parse(r) : []; } catch { return []; } }
 function saveHwPresets(list) { try { localStorage.setItem(HW_PRESET_KEY, JSON.stringify(list)); } catch {} }
+const CALC_CACHE_KEY = "sr-calc-cache-v1";
+function loadCalcCache() { try { const r = localStorage.getItem(CALC_CACHE_KEY); return r ? JSON.parse(r) : null; } catch { return null; } }
+function saveCalcCache(data) { try { localStorage.setItem(CALC_CACHE_KEY, JSON.stringify(data)); } catch {} }
 const NRE_UNIT = { length: 575, area: 11500 };
 const NRE_BASE = { length: 5,   area: 100   };
 const DEV_LICENSE_AMT = 84000;
@@ -976,7 +990,7 @@ function PresetModal({ params, onSave, onClose, t }) {
   const valid = brand.trim() && country.trim() && plant.trim();
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-xl p-6 w-80 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-xl p-6 w-[min(320px,90vw)] space-y-4 max-h-[90vh] overflow-y-auto">
         <div className="font-bold text-gray-800 text-base">{t.saveFactoryPreset}</div>
         <div className="space-y-2">
           <div className="text-xs font-bold text-gray-400 uppercase tracking-wide pt-1">{t.factoryInfo}</div>
@@ -1025,7 +1039,7 @@ function PresetPanel({ presets, onLoad, onDelete, onClose, t, sheetsLoading, onR
   }, {});
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-xl w-96 max-h-[80vh] flex flex-col">
+      <div className="bg-white rounded-2xl shadow-xl w-[min(384px,92vw)] max-h-[85vh] flex flex-col">
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="font-bold text-gray-800">{t.factoryPresets}</div>
@@ -1076,7 +1090,7 @@ function PresetPanel({ presets, onLoad, onDelete, onClose, t, sheetsLoading, onR
 function ChangelogModal({ onClose, lang }) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-xl w-[480px] max-h-[80vh] flex flex-col">
+      <div className="bg-white rounded-2xl shadow-xl w-[min(480px,92vw)] max-h-[80vh] flex flex-col">
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
           <div>
             <div className="font-bold text-gray-800">{lang === "ko" ? "릴리즈 노트" : "Release Notes"}</div>
@@ -1463,7 +1477,7 @@ function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexI
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-xl w-[480px] max-h-[85vh] flex flex-col">
+      <div className="bg-white rounded-2xl shadow-xl w-[min(480px,92vw)] max-h-[85vh] flex flex-col">
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
           <div>
             <div className="font-bold text-gray-800">{t.reportSection}</div>
@@ -1476,11 +1490,11 @@ function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexI
         <div className="px-4 pt-3 pb-0">
           <div className="flex rounded-lg overflow-hidden border border-gray-200 text-xs font-semibold">
             <button onClick={()=>setMode("internal")}
-              className={`flex-1 py-2 transition-colors ${mode==="internal" ? "bg-blue-600 text-white" : "text-gray-500 hover:bg-gray-50"}`}>
+              className={`flex-1 py-2.5 whitespace-nowrap px-2 transition-colors ${mode==="internal" ? "bg-blue-600 text-white" : "text-gray-500 hover:bg-gray-50"}`}>
               {t.reportModeInternal}
             </button>
             <button onClick={()=>setMode("quotation")}
-              className={`flex-1 py-2 transition-colors ${mode==="quotation" ? "bg-indigo-600 text-white" : "text-gray-500 hover:bg-gray-50"}`}>
+              className={`flex-1 py-2.5 whitespace-nowrap px-2 transition-colors ${mode==="quotation" ? "bg-indigo-600 text-white" : "text-gray-500 hover:bg-gray-50"}`}>
               {t.reportModeQuotation}
             </button>
           </div>
@@ -1676,17 +1690,21 @@ export default function App() {
   const [opexDiscount1, setOpexDiscount1] = useState(30);
   const [opexDiscountStep, setOpexDiscountStep] = useState(3);
 
-  // ── Pricing Calc tab state ──
-  const [sites, setSites] = useState([
+  // ── Pricing Calc tab state (캐시에서 복원) ──
+  const _calcCache = loadCalcCache();
+  const [sites, setSites] = useState(_calcCache?.sites || [
     { id: 1, name: "Site 1", type: "area", pathLen: 0, width: 40, height: 35,
       diff: { outdoor:0, elevation:0, roadWidth:0.1, surface:0, complexity:0.1, paved:0, capacity:0.1 } },
   ]);
-  const [hwConfig, setHwConfig] = useState(DEFAULT_HW_CONFIG);
-  const [hwCounts, setHwCounts] = useState({ xt32:6, ot128:0, qt128:0, zt128:0, server:0, etc:6 });
-  const [annThruput, setAnnThruput] = useState(300000);
+  const [hwConfig, setHwConfig] = useState(_calcCache?.hwConfig || DEFAULT_HW_CONFIG);
+  const [hwCounts, setHwCounts] = useState(_calcCache?.hwCounts || { xt32:6, ot128:0, qt128:0, zt128:0, server:0, etc:6 });
+  const [annThruput, setAnnThruput] = useState(_calcCache?.annThruput || 300000);
   const [hwPresets, setHwPresets] = useState(() => loadHwPresets());
   const [hwPresetName, setHwPresetName] = useState("");
   const [showReport, setShowReport] = useState(false);
+
+  // Pricing Calc 상태 변경 시 자동 캐시 저장
+  useEffect(() => { saveCalcCache({ sites, hwConfig, hwCounts, annThruput }); }, [sites, hwConfig, hwCounts, annThruput]);
 
   const cd = COUNTRIES[cKey];
   const capexBase = capexHW + capexNRE * diffFactor + capexInst + capexOther;
@@ -1949,7 +1967,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-50" style={{ fontFamily: "system-ui,sans-serif" }}>
       {toast && (
-        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl shadow-lg text-white text-sm font-semibold ${toast.ok ? "bg-green-600" : "bg-red-500"}`}>
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl shadow-lg text-white text-sm font-semibold max-w-xs text-center ${toast.ok ? "bg-green-600" : "bg-red-500"}`}>
           {toast.msg}
         </div>
       )}
@@ -2026,7 +2044,7 @@ export default function App() {
             <div className="flex items-center gap-2 bg-blue-800 rounded-lg px-3 py-1.5">
               <img src={googleUser.picture} alt="" style={{ width: 22, height: 22, borderRadius: "50%" }} />
               <span className="text-xs text-blue-200 hidden sm:block">{googleUser.name}</span>
-              <button onClick={googleLogout} className="text-xs text-blue-300 hover:text-white border border-blue-600 rounded px-2 py-0.5 ml-1">{t.logout}</button>
+              <button onClick={googleLogout} className="text-xs text-blue-300 hover:text-white border border-blue-600 rounded px-2 py-1 ml-1">{t.logout}</button>
             </div>
           </div>
         </div>
@@ -2035,7 +2053,7 @@ export default function App() {
             <div className="text-xs bg-blue-800 rounded-lg px-3 py-1.5 inline-flex flex-wrap items-center gap-2">
               <span className="text-blue-300">{t.loaded}</span>
               <span className="text-white font-semibold">{loadedName}</span>
-              <button onClick={handleUpdatePreset} className="bg-green-500 hover:bg-green-600 text-white text-xs px-2 py-0.5 rounded ml-1">{t.update}</button>
+              <button onClick={handleUpdatePreset} className="bg-green-500 hover:bg-green-600 text-white text-xs px-2 py-1 rounded ml-1">{t.update}</button>
               <button onClick={() => { setLoadedName(null); setLoadedRowIndex(null); }} className="text-blue-400 hover:text-white ml-1">✕</button>
             </div>
           </div>
@@ -2078,7 +2096,7 @@ export default function App() {
               {t.tabs.map((lbl2, i) => (
                 <button key={t.tabIds[i]} onClick={() => setTab(t.tabIds[i])}
                   title={lbl2}
-                  className={`flex-1 min-w-[60px] text-[10px] py-2 px-1 font-medium leading-tight transition-colors whitespace-nowrap ${tab === t.tabIds[i] ? "bg-blue-600 text-white" : "text-gray-500 hover:bg-gray-50"}`}>
+                  className={`flex-1 min-w-[58px] text-[11px] py-2 px-1 font-medium leading-tight transition-colors whitespace-nowrap ${tab === t.tabIds[i] ? "bg-blue-600 text-white" : "text-gray-500 hover:bg-gray-50"}`}>
                   {lbl2}
                 </button>
               ))}
@@ -2297,9 +2315,9 @@ export default function App() {
                           className="text-sm font-semibold border-b border-gray-300 focus:outline-none focus:border-blue-500 w-28" />
                         <div className="flex gap-1">
                           <button onClick={() => setSites(sites.map((x,i) => i===si ? {...x, type: x.type==="area"?"length":"area", pathLen:0, width:40, height:35} : x))}
-                            className={`text-xs px-2 py-0.5 rounded ${s.type==="area" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600"}`}>{t.areaType}</button>
+                            className={`text-xs px-2 py-1 rounded ${s.type==="area" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600"}`}>{t.areaType}</button>
                           <button onClick={() => setSites(sites.map((x,i) => i===si ? {...x, type: x.type==="length"?"area":"length", pathLen:0, width:40, height:35} : x))}
-                            className={`text-xs px-2 py-0.5 rounded ${s.type==="length" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600"}`}>{t.lengthType}</button>
+                            className={`text-xs px-2 py-1 rounded ${s.type==="length" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600"}`}>{t.lengthType}</button>
                           {sites.length > 1 && <button onClick={() => setSites(sites.filter((_,i)=>i!==si))} className="text-xs text-red-400 hover:text-red-600 ml-1">{t.removeSite}</button>}
                         </div>
                       </div>
@@ -2309,7 +2327,7 @@ export default function App() {
                           <Inp v={s.pathLen} set={v => setSites(sites.map((x,i)=>i===si?{...x,pathLen:v}:x))} min={0} max={10000} step={10} unit="m" />
                         </div>
                       ) : (
-                        <div className="flex items-center gap-4 text-xs mb-2">
+                        <div className="flex flex-wrap items-center gap-2 text-xs mb-2">
                           <div className="flex items-center gap-1"><span className="text-gray-500 w-8">{t.areaWidth}</span><Inp v={s.width} set={v => setSites(sites.map((x,i)=>i===si?{...x,width:v}:x))} min={0} max={1000} step={5} unit="m" /></div>
                           <span className="text-gray-300">×</span>
                           <div className="flex items-center gap-1"><span className="text-gray-500 w-8">{t.areaHeight}</span><Inp v={s.height} set={v => setSites(sites.map((x,i)=>i===si?{...x,height:v}:x))} min={0} max={1000} step={5} unit="m" /></div>
@@ -2340,7 +2358,7 @@ export default function App() {
                 <div className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">{t.hwSection}</div>
                 <div className="mb-2">
                   {/* 헤더 */}
-                  <div className="flex items-center gap-1 text-[10px] text-gray-400 font-semibold mb-1 px-1">
+                  <div className="flex items-center gap-1 text-xs text-gray-400 font-semibold mb-1 px-1">
                     <span className="w-16 shrink-0">{t.hwBrand}</span>
                     <span className="flex-1 min-w-0">{t.hwName}</span>
                     <span className="w-20 shrink-0 text-right">{t.hwPriceLabel}</span>
@@ -2401,9 +2419,9 @@ export default function App() {
                         </div>
                         <div className="flex gap-1">
                           <button onClick={() => { setHwConfig(p.config); setHwCounts(p.counts); }}
-                            className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded hover:bg-blue-700">{t.loadHwConfig}</button>
+                            className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">{t.loadHwConfig}</button>
                           <button onClick={() => { const next=hwPresets.filter(x=>x.id!==p.id); setHwPresets(next); saveHwPresets(next); }}
-                            className="text-xs border border-red-200 text-red-500 px-2 py-0.5 rounded hover:bg-red-50">{t.deleteHwConfig}</button>
+                            className="text-xs border border-red-200 text-red-500 px-2 py-1 rounded hover:bg-red-50">{t.deleteHwConfig}</button>
                         </div>
                       </div>
                     ))}
@@ -2459,7 +2477,7 @@ export default function App() {
 
         {/* RIGHT */}
         <div className="lg:col-span-3 space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <KPI label={t.backCalcUPHkpi} value={`${R.uph.toFixed(1)}/h`}         sub={t.reqUnitsHr} />
             <KPI label={t.cycleTimeKpi}   value={`${R.cycleT.toFixed(0)} ${t.min}`} sub={t.stepTotal} />
             <KPI label={t.srDrivers}      value={c(R.drvTot)}                      sub={t.srPerShift(c(R.drvPS), nShifts, srRatio)} hi />
