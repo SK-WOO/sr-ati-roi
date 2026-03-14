@@ -542,7 +542,7 @@ const T = {
     savedToDrive: "Saved to Google Drive ✓",
     saveToDriveFail: "Drive save failed — please re-login",
     saveToDriveNoAuth: "Drive access not granted — please logout and re-login",
-    saveToDriveHint: "💡 Saved to your personal Google Drive → 'SR ATI ROI Reports' folder",
+    saveToDriveHint: "💡 Saved to your personal Google Drive (My Drive)",
     // Toast (sheets)
     sheetsLoadFail: "Sheets load failed — using local data",
     sheetsRefreshFail: "Sheets refresh failed",
@@ -826,7 +826,7 @@ const T = {
     savedToDrive: "Google Drive에 저장됨 ✓",
     saveToDriveFail: "Drive 저장 실패 — 재로그인 필요",
     saveToDriveNoAuth: "Drive 권한 없음 — 로그아웃 후 재로그인 해주세요",
-    saveToDriveHint: "💡 내 Google Drive → 'SR ATI ROI Reports' 폴더에 저장됩니다",
+    saveToDriveHint: "💡 내 Google Drive (My Drive)에 저장됩니다",
     // Toast (sheets)
     sheetsLoadFail: "Sheets 로드 실패 — 로컬 데이터 사용",
     sheetsRefreshFail: "Sheets 새로고침 실패",
@@ -923,32 +923,8 @@ async function sheetsDeleteRow(token, rowIndex) {
 }
 
 // ── Google Drive helpers ────────────────────────────────
-async function getOrCreateDriveFolder(token) {
-  const q = encodeURIComponent(`name='${DRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
-  const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) {
-    const e = await res.json().catch(() => ({}));
-    throw new Error(`folder search ${res.status} — ${e?.error?.message || "unknown"}`);
-  }
-  const { files } = await res.json();
-  if (files?.length > 0) return files[0].id;
-  const createRes = await fetch("https://www.googleapis.com/drive/v3/files", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ name: DRIVE_FOLDER_NAME, mimeType: "application/vnd.google-apps.folder" }),
-  });
-  if (!createRes.ok) {
-    const e = await createRes.json().catch(() => ({}));
-    throw new Error(`folder create ${createRes.status} — ${e?.error?.message || "unknown"}`);
-  }
-  return (await createRes.json()).id;
-}
-
 async function uploadToDrive(token, blob, fileName) {
-  const folderId = await getOrCreateDriveFolder(token);
-  const metadata = { name: fileName, mimeType: "application/pdf", parents: [folderId] };
+  const metadata = { name: fileName, mimeType: "application/pdf" };
   const form = new FormData();
   form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
   form.append("file", blob);
