@@ -152,9 +152,8 @@ const CLIENT_ID = "318386102464-2bavuh812hpk4gsegb5tkvrsnhartsm9.apps.googleuser
 const ALLOWED_DOMAIN = "seoulrobotics.org";
 const SHEET_ID = "1drJd-Ete7ANEzhNliihFboZ4v8d4jngD9U_fTAjy71s";
 const SHEET_NAME = "Presets";
-const SHEETS_SCOPE = "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive";
-const DRIVE_FOLDER_NAME = "SR ATI ROI Reports";
-const SHARED_DRIVE_ID = "0AEhuFnmNRVDCUk9PVA";
+const SHEETS_SCOPE = "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file";
+const DRIVE_FOLDER_ID = "1CBJSurqLXL2LqBIZVYiIyxJ5BaNLkhn_";
 
 function useGoogleAuth() {
   const [user, setUser] = useState(null);
@@ -907,49 +906,19 @@ async function sheetsDeleteRow(token, rowIndex) {
 }
 
 // ── Google Drive helpers ────────────────────────────────
-async function getDriveFolderId(token) {
-  const q = encodeURIComponent(`name='${DRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false and '${SHARED_DRIVE_ID}' in parents`);
-  const res = await fetch(
-    `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)&supportsAllDrives=true&includeItemsFromAllDrives=true&driveId=${SHARED_DRIVE_ID}&corpora=drive`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    console.error("[Drive] folder search failed:", res.status, err);
-    throw new Error(`Drive folder search failed: ${res.status} ${JSON.stringify(err)}`);
-  }
-  const data = await res.json();
-  console.log("[Drive] folder search result:", data);
-  if (data.files?.length > 0) return data.files[0].id;
-  const createRes = await fetch("https://www.googleapis.com/drive/v3/files?supportsAllDrives=true", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ name: DRIVE_FOLDER_NAME, mimeType: "application/vnd.google-apps.folder", parents: [SHARED_DRIVE_ID] }),
-  });
-  if (!createRes.ok) {
-    const err = await createRes.json().catch(() => ({}));
-    console.error("[Drive] folder creation failed:", createRes.status, err);
-    throw new Error(`Drive folder creation failed: ${createRes.status} ${JSON.stringify(err)}`);
-  }
-  const folder = await createRes.json();
-  console.log("[Drive] folder created:", folder);
-  return folder.id;
-}
-
 async function uploadToDrive(token, blob, fileName) {
-  const folderId = await getDriveFolderId(token);
-  const metadata = { name: fileName, mimeType: "application/pdf", parents: [folderId] };
+  const metadata = { name: fileName, mimeType: "application/pdf", parents: [DRIVE_FOLDER_ID] };
   const form = new FormData();
   form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
   form.append("file", blob);
   const res = await fetch(
-    "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink&supportsAllDrives=true",
+    "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name&supportsAllDrives=true",
     { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form }
   );
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     console.error("[Drive] upload failed:", res.status, err);
-    throw new Error(`Drive upload failed: ${res.status} ${JSON.stringify(err)}`);
+    throw new Error(`${res.status}: ${JSON.stringify(err)}`);
   }
   return await res.json();
 }
