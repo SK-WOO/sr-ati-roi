@@ -300,6 +300,13 @@ const T = {
     wageInflation: "Wage Inflation",
     tabs: ["📦 Production", "🚗 Transport", "👷 Workforce", "🤖 SR Pricing", "🧮 Pricing Calc"],
     tabIds: ["prod", "trans", "work", "sr", "calc"],
+    tabDescs: [
+      "Factory production parameters → UPH, drivers/shift, SR unit count",
+      "8-stage manned trip cycle time → total driver headcount baseline",
+      "Annual labor cost baseline → cost per driver, total fleet cost",
+      "CAPEX / OPEX structure + ROI analysis, sensitivity & scenario A/B",
+      "Nissan Excel pricing logic → BOM-based CAPEX & OPEX auto-calc",
+    ],
     prodTitle: "Production Parameters",
     prodSub: "Inputs → CAPA & UPH back-calculation",
     regDays: "Regular Working Days / Year",
@@ -584,6 +591,13 @@ const T = {
     wageInflation: "임금 인상률",
     tabs: ["📦 생산", "🚗 운송", "👷 인력", "🤖 SR 가격", "🧮 가격 계산"],
     tabIds: ["prod", "trans", "work", "sr", "calc"],
+    tabDescs: [
+      "공장 생산 파라미터 → 시간당 생산량(UPH), 교대당 기사 수, SR 대수",
+      "8단계 유인 운행 사이클 시간 → 총 운전기사 인원 기준선",
+      "연간 인건비 기준선 → 1인당 비용, 전체 인력 비용 합산",
+      "CAPEX/OPEX 구성 + ROI 분석, 민감도 분석, 시나리오 A/B 비교",
+      "닛산 Excel 가격 산정 로직 → BOM 기반 CAPEX·OPEX 자동 계산",
+    ],
     prodTitle: "생산 파라미터",
     prodSub: "입력값 → CAPA & UPH 역산",
     regDays: "연간 정규 근무일",
@@ -1188,6 +1202,63 @@ function ChangelogModal({ onClose, lang }) {
               </ul>
             </div>
           ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HelpModal({ onClose, lang, t }) {
+  const cl = CHANGELOG[0]; // always latest — auto-updates when CHANGELOG[0] changes
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 pt-14 px-2">
+      <div className="bg-white rounded-2xl shadow-xl w-[min(560px,96vw)] max-h-[82vh] flex flex-col">
+        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+          <div>
+            <div className="font-bold text-gray-800">{lang === "ko" ? "🛠 기능 가이드" : "🛠 Feature Guide"}</div>
+            <div className="text-xs text-gray-400 mt-0.5">{VERSION} · {BUILD_DATE}</div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
+        </div>
+        <div className="overflow-y-auto p-4 space-y-5">
+          {/* Tab overview */}
+          <div>
+            <div className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">
+              {lang === "ko" ? "탭 구성" : "Tab Overview"}
+            </div>
+            <div className="space-y-2">
+              {t.tabs.map((tab, i) => (
+                <div key={i} className="flex gap-3 items-start">
+                  <span className="text-xs font-bold text-blue-700 whitespace-nowrap pt-0.5 w-36 shrink-0">{tab}</span>
+                  <span className="text-xs text-gray-500 leading-relaxed">{t.tabDescs[i]}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* What's new */}
+          <div>
+            <div className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">
+              {lang === "ko" ? `🆕 ${cl.version} 새 기능` : `🆕 What's new in ${cl.version}`}
+            </div>
+            <ul className="space-y-1.5">
+              {(lang === "ko" ? cl.ko : cl.en).map((item, i) => (
+                <li key={i} className="text-xs text-gray-600 flex gap-2">
+                  <span className="text-blue-400 shrink-0 mt-0.5">•</span>
+                  <span className="leading-relaxed">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        <div className="p-4 border-t border-gray-100 flex justify-between items-center">
+          <a href="https://seoulrobotics.atlassian.net/wiki/x/EAAi5" target="_blank" rel="noreferrer"
+            className="text-xs text-blue-500 hover:underline">
+            {lang === "ko" ? "📖 전체 매뉴얼" : "📖 Full Manual"}
+          </a>
+          <button onClick={onClose}
+            className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-xl text-sm">
+            {lang === "ko" ? "닫기" : "Close"}
+          </button>
         </div>
       </div>
     </div>
@@ -1896,6 +1967,7 @@ export default function App() {
   const [scenarioA, setScenarioA] = useState(null);
   const [scenarioB, setScenarioB] = useState(null);
   const [showScenario, setShowScenario] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   // Pricing Calc 상태 변경 시 자동 캐시 저장
   useEffect(() => { saveCalcCache({ sites, hwConfig, hwCounts, annThruput, laborInputs }); }, [sites, hwConfig, hwCounts, annThruput, laborInputs]);
@@ -2258,6 +2330,7 @@ export default function App() {
         />
       )}
       {showChangelog && <ChangelogModal onClose={() => setShowChangelog(false)} lang={lang} />}
+      {showHelp && <HelpModal onClose={() => setShowHelp(false)} lang={lang} t={t} />}
       {showScenario && <ScenarioModal onClose={() => setShowScenario(false)} A={scenarioA} B={scenarioB} lang={lang} c={c} $c={$c} />}
       {showReport && (
         <ReportModal
@@ -2289,6 +2362,10 @@ export default function App() {
             </div>
           </div>
           <div className="ml-auto flex flex-wrap items-center gap-2">
+            <button onClick={() => setShowHelp(true)} title={lang === "ko" ? "기능 가이드" : "Feature Guide"}
+              className="flex items-center justify-center w-8 h-8 bg-blue-800 hover:bg-blue-900 rounded-lg text-white text-sm font-bold">
+              ?
+            </button>
             <a href="https://seoulrobotics.atlassian.net/wiki/x/EAAi5"
   target="_blank" rel="noreferrer"
   title="Manual"
