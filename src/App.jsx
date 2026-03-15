@@ -976,8 +976,11 @@ function loadCalcCache() { try { const r = localStorage.getItem(CALC_CACHE_KEY);
 function saveCalcCache(data) { try { localStorage.setItem(CALC_CACHE_KEY, JSON.stringify(data)); } catch {} }
 const NRE_BASE = { length: 5, area: 100 };
 const DEV_LICENSE_AMT = 84000;
-const LABOR_RATES = { jr: 7351, mid: 9905, sr: 11607 };   // $/person·month (from Nissan Excel)
-const DEFAULT_LABOR = { jr: { hc: 5, mm: 8 }, mid: { hc: 3, mm: 8 }, sr: { hc: 2, mm: 8 } };
+const DEFAULT_LABOR = [
+  { id: "jr",  label: "Jr. Engineer",  rate: 7351,  hc: 5, mm: 8 },
+  { id: "mid", label: "Mid Engineer",  rate: 9905,  hc: 3, mm: 8 },
+  { id: "sr",  label: "Sr. Engineer",  rate: 11607, hc: 2, mm: 8 },
+];
 
 const COUNTRIES = {
   US: { name: "🇺🇸 United States",  holidays: 11, avgWage: 52000, surcharge: 30, inflation: 3.0 },
@@ -1875,7 +1878,11 @@ export default function App() {
   const [opexSwLicense, setOpexSwLicense] = useState(0);
 
   // ── Pricing Calc tab state (캐시에서 복원 — lazy initializer로 최초 1회만 읽음) ──
-  const [laborInputs, setLaborInputs] = useState(() => loadCalcCache()?.laborInputs || DEFAULT_LABOR);
+  const [laborInputs, setLaborInputs] = useState(() => {
+    const cached = loadCalcCache()?.laborInputs;
+    if (Array.isArray(cached) && cached.length > 0) return cached;
+    return DEFAULT_LABOR;
+  });
   const [sites, setSites] = useState(() => loadCalcCache()?.sites || [
     { id: 1, name: "Site 1", type: "area", pathLen: 0, width: 40, height: 35,
       diff: { outdoor:0, elevation:0, roadWidth:0.1, surface:0, complexity:0.1, paved:0, capacity:0.1 } },
@@ -1964,11 +1971,23 @@ export default function App() {
     setOpexDiscountStep(clamp(p.opexDiscountStep ?? 3, 0, 20, 3));
     setOpexSwLicense(clamp(p.opexSwLicense ?? 0, 0, 5000000, 0));
     if (p.laborInputs) {
-      setLaborInputs({
-        jr:  { hc: clamp(p.laborInputs.jr?.hc  ?? 5, 0, 50, 5), mm: clamp(p.laborInputs.jr?.mm  ?? 8, 0, 36, 8) },
-        mid: { hc: clamp(p.laborInputs.mid?.hc ?? 3, 0, 50, 3), mm: clamp(p.laborInputs.mid?.mm ?? 8, 0, 36, 8) },
-        sr:  { hc: clamp(p.laborInputs.sr?.hc  ?? 2, 0, 50, 2), mm: clamp(p.laborInputs.sr?.mm  ?? 8, 0, 36, 8) },
-      });
+      if (Array.isArray(p.laborInputs) && p.laborInputs.length > 0) {
+        setLaborInputs(p.laborInputs.map(r => ({
+          id:    r.id    || String(Date.now() + Math.random()),
+          label: r.label || "Engineer",
+          rate:  clamp(r.rate ?? 0, 0, 9999999, 0),
+          hc:    clamp(r.hc   ?? 0, 0, 200, 0),
+          mm:    clamp(r.mm   ?? 0, 0, 60,  0),
+        })));
+      } else if (!Array.isArray(p.laborInputs)) {
+        // legacy object format → convert to array
+        const legacy = p.laborInputs;
+        setLaborInputs(DEFAULT_LABOR.map(d => ({
+          ...d,
+          hc: clamp(legacy[d.id]?.hc ?? d.hc, 0, 200, d.hc),
+          mm: clamp(legacy[d.id]?.mm ?? d.mm, 0, 60,  d.mm),
+        })));
+      }
     }
     setLoadedName(`${preset.brand} · ${preset.country} · ${preset.plant}`);
     setLoadedRowIndex(preset._rowIndex ?? null);
@@ -2121,10 +2140,8 @@ export default function App() {
       swUpdatePerM2, overhaulRate, overhaulCycle, opexDiscount1, opexDiscountStep, opexSwLicense]);
 
   const PC = useMemo(() => {
-    // baseLaborNRE = Σ(HC × MM × rate) from laborInputs
-    const baseLaborNRE = laborInputs.jr.hc  * laborInputs.jr.mm  * LABOR_RATES.jr
-                       + laborInputs.mid.hc * laborInputs.mid.mm * LABOR_RATES.mid
-                       + laborInputs.sr.hc  * laborInputs.sr.mm  * LABOR_RATES.sr;
+    // baseLaborNRE = Σ(HC × MM × rate) across all labor rows
+    const baseLaborNRE = laborInputs.reduce((s, r) => s + r.hc * r.mm * r.rate, 0);
 
     const siteRowsRaw = sites.map(s => {
       const totalSize = s.type === "length" ? s.pathLen : s.width * s.height;
@@ -2613,38 +2630,57 @@ export default function App() {
                   className="w-full border border-dashed border-blue-300 text-blue-500 text-xs py-2 rounded-lg hover:bg-blue-50 mb-3">{t.addSite}</button>
 
                 {/* NRE Labor Config */}
-                <div className="flex items-center justify-between mb-1">
-                  <div className="text-xs font-bold text-gray-400 uppercase tracking-wide">
-                    {lang === "ko" ? "🔧 NRE 인력 구성" : "🔧 NRE Labor Config"}
-                  </div>
-                  <button onClick={() => setLaborInputs(DEFAULT_LABOR)}
-                    className="text-xs text-gray-400 border border-gray-200 rounded px-2 py-0.5 hover:bg-gray-50">
-                    {lang === "ko" ? "기본값 초기화" : "Reset Defaults"}
-                  </button>
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">
+                  {lang === "ko" ? "🔧 NRE 인력 구성" : "🔧 NRE Labor Config"}
                 </div>
-                <div className="bg-gray-50 rounded-lg p-2 mb-3 text-xs">
-                  <div className="grid grid-cols-5 gap-1 text-gray-400 font-semibold mb-1 px-1 text-center">
-                    <span className="col-span-2 text-left">{lang === "ko" ? "직급" : "Level"}</span>
-                    <span>HC</span>
-                    <span>MM</span>
-                    <span className="text-right">{lang === "ko" ? "소계" : "Subtotal"}</span>
+                <div className="mb-2">
+                  {/* 헤더 */}
+                  <div className="flex items-center gap-1 text-xs text-gray-400 font-semibold mb-1 px-1">
+                    <span className="flex-1 min-w-0">{lang === "ko" ? "직급/역할" : "Role / Level"}</span>
+                    <span className="w-20 shrink-0 text-right">{lang === "ko" ? "단가($/월)" : "Rate($/mo)"}</span>
+                    <span className="w-10 shrink-0 text-right">HC</span>
+                    <span className="w-10 shrink-0 text-right">MM</span>
+                    <span className="w-20 shrink-0 text-right">{lang === "ko" ? "소계" : "Subtotal"}</span>
+                    <span className="w-4 shrink-0" />
                   </div>
-                  {[
-                    { key: "jr",  label: lang === "ko" ? "Jr. 엔지니어" : "Jr. Engineer",  rate: LABOR_RATES.jr  },
-                    { key: "mid", label: lang === "ko" ? "Mid 엔지니어"  : "Mid Engineer",  rate: LABOR_RATES.mid },
-                    { key: "sr",  label: lang === "ko" ? "Sr. 엔지니어"  : "Sr. Engineer",  rate: LABOR_RATES.sr  },
-                  ].map(({ key, label, rate }) => (
-                    <div key={key} className="grid grid-cols-5 gap-1 items-center py-1 border-t border-gray-100">
-                      <span className="col-span-2 text-gray-600">{label}</span>
-                      <Inp v={laborInputs[key].hc} set={v => setLaborInputs(li => ({ ...li, [key]: { ...li[key], hc: v } }))} min={0} max={50} step={1} w="w-10" />
-                      <Inp v={laborInputs[key].mm} set={v => setLaborInputs(li => ({ ...li, [key]: { ...li[key], mm: v } }))} min={0} max={36} step={1} w="w-10" />
-                      <span className="text-right text-indigo-700 font-semibold">{$c(laborInputs[key].hc * laborInputs[key].mm * rate)}</span>
+                  {/* 데이터 행 */}
+                  {laborInputs.map((row, ri) => (
+                    <div key={row.id} className="flex items-center gap-1 py-1 border-b border-gray-100 last:border-0">
+                      <input value={row.label}
+                        onChange={e => setLaborInputs(li => li.map((r, i) => i === ri ? { ...r, label: e.target.value } : r))}
+                        className="flex-1 min-w-0 border border-gray-200 rounded px-1.5 py-1 text-xs focus:outline-none focus:border-blue-400" />
+                      <div className="w-20 shrink-0">
+                        <Inp v={row.rate} set={v => setLaborInputs(li => li.map((r, i) => i === ri ? { ...r, rate: v } : r))}
+                          min={0} max={9999999} step={100} w="w-20" comma />
+                      </div>
+                      <div className="w-10 shrink-0">
+                        <Inp v={row.hc} set={v => setLaborInputs(li => li.map((r, i) => i === ri ? { ...r, hc: v } : r))}
+                          min={0} max={200} step={1} w="w-10" />
+                      </div>
+                      <div className="w-10 shrink-0">
+                        <Inp v={row.mm} set={v => setLaborInputs(li => li.map((r, i) => i === ri ? { ...r, mm: v } : r))}
+                          min={0} max={60} step={1} w="w-10" />
+                      </div>
+                      <span className="w-20 shrink-0 text-right text-xs text-indigo-700 font-semibold">{$c(row.hc * row.mm * row.rate)}</span>
+                      <div className="w-4 shrink-0 text-center">
+                        <button onClick={() => setLaborInputs(li => li.filter((_, i) => i !== ri))}
+                          className="text-red-400 hover:text-red-600 text-xs leading-none">✕</button>
+                      </div>
                     </div>
                   ))}
-                  <div className="flex justify-between pt-1.5 border-t border-gray-200 font-bold text-indigo-800 mt-1">
-                    <span>{lang === "ko" ? "NRE 기본 인건비" : "Base Labor NRE"}</span>
-                    <span>{$c(PC.baseLaborNRE)}</span>
-                  </div>
+                </div>
+                <div className="flex gap-2 mb-3">
+                  <button onClick={() => setLaborInputs(li => [...li, { id: `custom_${Date.now()}`, label: "Engineer", rate: 0, hc: 1, mm: 8 }])}
+                    className="text-xs text-blue-500 border border-blue-200 rounded-lg px-2 py-1 hover:bg-blue-50">
+                    {lang === "ko" ? "+ 행 추가" : "+ Add Row"}
+                  </button>
+                  <button onClick={() => setLaborInputs(DEFAULT_LABOR)}
+                    className="text-xs text-gray-400 border border-gray-200 rounded-lg px-2 py-1 hover:bg-gray-50">
+                    {lang === "ko" ? "기본값 초기화" : "Reset Defaults"}
+                  </button>
+                  <span className="ml-auto text-xs font-bold text-indigo-800 self-center">
+                    {lang === "ko" ? "합계:" : "Total:"} {$c(PC.baseLaborNRE)}
+                  </span>
                 </div>
 
                 {/* HW 구성 */}
