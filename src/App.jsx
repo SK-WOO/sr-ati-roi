@@ -13,9 +13,28 @@ import autoTable from "jspdf-autotable";
 ChartJS.register(ArcElement, CTooltip, CLegend, CategoryScale, LinearScale, BarElement, Title, PointElement, LineElement, Filler, RadialLinearScale);
 
 // ── Version & Changelog ────────────────────────────────
-const VERSION = "v1.9.2";
-const BUILD_DATE = "2026-03-14";
+const VERSION = "v1.10.0";
+const BUILD_DATE = "2026-03-15";
 const CHANGELOG = [
+  {
+    version: "v1.10.0", date: "2026-03-15",
+    en: [
+      "Fix: NRE labor config (laborInputs) now saved in team presets",
+      "Fix: Drive 401 token expiry → silent re-auth & automatic retry",
+      "Fix: Operational License added to SR Pricing area-mode OPEX",
+      "UX: Reset Labor Defaults button in Pricing Calc tab",
+      "New: Sensitivity Analysis panel (CAPEX ±20% / Labor ±20%)",
+      "New: Scenario A/B save & compare (side-by-side key metrics)",
+    ],
+    ko: [
+      "수정: NRE 인력 구성(laborInputs) 팀 프리셋에 저장됨",
+      "수정: Drive 401 토큰 만료 → 자동 재인증 및 재시도",
+      "수정: SR Pricing OPEX에 Operational License 포함",
+      "UX: Pricing Calc 탭 인건비 기본값 초기화 버튼",
+      "신규: 민감도 분석 패널 (CAPEX/인건비 ±20%)",
+      "신규: 시나리오 A/B 저장 및 비교 (핵심 지표 나란히 비교)",
+    ],
+  },
   {
     version: "v1.9.2", date: "2026-03-14",
     en: ["Report/Quotation: 💾 Save to Google Drive button (auto-folder 'SR ATI ROI Reports')",
@@ -955,9 +974,10 @@ function saveHwPresets(list) { try { localStorage.setItem(HW_PRESET_KEY, JSON.st
 const CALC_CACHE_KEY = "sr-calc-cache-v1";
 function loadCalcCache() { try { const r = localStorage.getItem(CALC_CACHE_KEY); return r ? JSON.parse(r) : null; } catch { return null; } }
 function saveCalcCache(data) { try { localStorage.setItem(CALC_CACHE_KEY, JSON.stringify(data)); } catch {} }
-const NRE_UNIT = { length: 575, area: 11500 };
-const NRE_BASE = { length: 5,   area: 100   };
+const NRE_BASE = { length: 5, area: 100 };
 const DEV_LICENSE_AMT = 84000;
+const LABOR_RATES = { jr: 7351, mid: 9905, sr: 11607 };   // $/person·month (from Nissan Excel)
+const DEFAULT_LABOR = { jr: { hc: 5, mm: 8 }, mid: { hc: 3, mm: 8 }, sr: { hc: 2, mm: 8 } };
 
 const COUNTRIES = {
   US: { name: "🇺🇸 United States",  holidays: 11, avgWage: 52000, surcharge: 30, inflation: 3.0 },
@@ -1165,6 +1185,68 @@ function ChangelogModal({ onClose, lang }) {
               </ul>
             </div>
           ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ScenarioModal({ onClose, A, B, lang, c, $c }) {
+  const hasA = !!A, hasB = !!B;
+  const rows = [
+    { key: "label",            label: lang === "ko" ? "시나리오"       : "Scenario" },
+    { key: "capexStr",         label: "CAPEX" },
+    { key: "bep",              label: lang === "ko" ? "손익분기점"     : "Break-Even" },
+    { key: "roi",              label: "ROI" },
+    { key: "yr1",              label: lang === "ko" ? "1년차 절감"     : "Yr 1 Savings",       fmt: v => v > 0 ? `$${c(v)}` : "—" },
+    { key: "finSav",           label: lang === "ko" ? "누적 절감"      : "Cumulative Savings",  fmt: v => v > 0 ? `+$${c(v)}` : "—" },
+    { key: "annLaborBaseline", label: lang === "ko" ? "기준 인건비"    : "Labor Baseline",      fmt: v => `$${c(v)}` },
+    { key: "annOpex",          label: lang === "ko" ? "연간 OPEX"     : "Annual OPEX",          fmt: v => `$${c(v)}` },
+    { key: "annDepr",          label: lang === "ko" ? "연간 감가상각"  : "Annual Depr.",         fmt: v => `$${c(v)}` },
+  ];
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl shadow-xl w-[min(520px,94vw)] max-h-[85vh] flex flex-col">
+        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+          <div className="font-bold text-gray-800">{lang === "ko" ? "📊 시나리오 비교" : "📊 Scenario Comparison"}</div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
+        </div>
+        <div className="overflow-y-auto p-4">
+          {(!hasA && !hasB) ? (
+            <div className="text-center text-gray-400 text-sm py-8">
+              {lang === "ko" ? "저장된 시나리오가 없습니다. ROI 탭에서 저장하세요." : "No scenarios saved yet. Save from the ROI tab."}
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr>
+                  <th className="text-left text-xs text-gray-400 font-semibold py-2 w-1/3">{lang === "ko" ? "항목" : "Metric"}</th>
+                  <th className="text-center py-2 w-1/3">
+                    <span className="bg-blue-100 text-blue-700 rounded px-2 py-0.5 text-xs font-bold">A</span>
+                  </th>
+                  <th className="text-center py-2 w-1/3">
+                    <span className="bg-purple-100 text-purple-700 rounded px-2 py-0.5 text-xs font-bold">B</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map(row => (
+                  <tr key={row.key} className="border-t border-gray-50">
+                    <td className="py-2 text-xs text-gray-500 pr-2">{row.label}</td>
+                    <td className="py-2 text-center text-xs font-semibold text-blue-700">
+                      {hasA ? (row.fmt ? row.fmt(A[row.key]) : A[row.key]) : <span className="text-gray-300">—</span>}
+                    </td>
+                    <td className="py-2 text-center text-xs font-semibold text-purple-700">
+                      {hasB ? (row.fmt ? row.fmt(B[row.key]) : B[row.key]) : <span className="text-gray-300">—</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+        <div className="p-4 border-t border-gray-100">
+          <button onClick={onClose} className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-xl text-sm">{lang === "ko" ? "닫기" : "Close"}</button>
         </div>
       </div>
     </div>
@@ -1541,10 +1623,20 @@ function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexI
     setDriveLoading(m);
     setDriveError(null);
     try {
-      const token = driveToken || await requestDriveToken();
+      let token = driveToken || await requestDriveToken();
       if (!token) { setDriveLoading("noauth"); setTimeout(() => setDriveLoading(null), 6000); return; }
       const { doc, fileName } = m === "internal" ? buildInternalPdf() : buildQuotationPdf();
-      await uploadToDrive(token, doc.output("blob"), fileName);
+      const blob = doc.output("blob");
+      try {
+        await uploadToDrive(token, blob, fileName);
+      } catch (e) {
+        if (e.message.startsWith("401")) {
+          // Token expired — silent re-auth and retry once
+          token = await requestDriveToken();
+          if (!token) throw new Error("401 — re-auth failed");
+          await uploadToDrive(token, blob, fileName);
+        } else throw e;
+      }
       setDriveLoading("done");
       setTimeout(() => setDriveLoading(null), 3000);
     } catch (e) {
@@ -1780,8 +1872,10 @@ export default function App() {
   const [overhaulCycle, setOverhaulCycle] = useState(5);
   const [opexDiscount1, setOpexDiscount1] = useState(30);
   const [opexDiscountStep, setOpexDiscountStep] = useState(3);
+  const [opexSwLicense, setOpexSwLicense] = useState(0);
 
   // ── Pricing Calc tab state (캐시에서 복원 — lazy initializer로 최초 1회만 읽음) ──
+  const [laborInputs, setLaborInputs] = useState(() => loadCalcCache()?.laborInputs || DEFAULT_LABOR);
   const [sites, setSites] = useState(() => loadCalcCache()?.sites || [
     { id: 1, name: "Site 1", type: "area", pathLen: 0, width: 40, height: 35,
       diff: { outdoor:0, elevation:0, roadWidth:0.1, surface:0, complexity:0.1, paved:0, capacity:0.1 } },
@@ -1792,9 +1886,12 @@ export default function App() {
   const [hwPresets, setHwPresets] = useState(() => loadHwPresets());
   const [hwPresetName, setHwPresetName] = useState("");
   const [showReport, setShowReport] = useState(false);
+  const [scenarioA, setScenarioA] = useState(null);
+  const [scenarioB, setScenarioB] = useState(null);
+  const [showScenario, setShowScenario] = useState(false);
 
   // Pricing Calc 상태 변경 시 자동 캐시 저장
-  useEffect(() => { saveCalcCache({ sites, hwConfig, hwCounts, annThruput }); }, [sites, hwConfig, hwCounts, annThruput]);
+  useEffect(() => { saveCalcCache({ sites, hwConfig, hwCounts, annThruput, laborInputs }); }, [sites, hwConfig, hwCounts, annThruput, laborInputs]);
 
   const cd = COUNTRIES[cKey];
   const capexBase = capexHW + capexNRE * diffFactor + capexInst + capexOther;
@@ -1810,7 +1907,8 @@ export default function App() {
     opexMode, opexPM, opexArea, opexPerM2, srGrw, projYrs,
     capexOverhead, capexDiscount, diffFactor,
     hwWarrantyRate, supportPerM2, swUpdatePerM2, overhaulRate, overhaulCycle,
-    opexDiscount1, opexDiscountStep,
+    opexDiscount1, opexDiscountStep, opexSwLicense,
+    laborInputs,
   });
 
   const loadPreset = (preset) => {
@@ -1864,6 +1962,14 @@ export default function App() {
     setOverhaulCycle(clamp(p.overhaulCycle ?? 5, 1, 20, 5));
     setOpexDiscount1(clamp(p.opexDiscount1 ?? 30, 0, 80, 30));
     setOpexDiscountStep(clamp(p.opexDiscountStep ?? 3, 0, 20, 3));
+    setOpexSwLicense(clamp(p.opexSwLicense ?? 0, 0, 5000000, 0));
+    if (p.laborInputs) {
+      setLaborInputs({
+        jr:  { hc: clamp(p.laborInputs.jr?.hc  ?? 5, 0, 50, 5), mm: clamp(p.laborInputs.jr?.mm  ?? 8, 0, 36, 8) },
+        mid: { hc: clamp(p.laborInputs.mid?.hc ?? 3, 0, 50, 3), mm: clamp(p.laborInputs.mid?.mm ?? 8, 0, 36, 8) },
+        sr:  { hc: clamp(p.laborInputs.sr?.hc  ?? 2, 0, 50, 2), mm: clamp(p.laborInputs.sr?.mm  ?? 8, 0, 36, 8) },
+      });
+    }
     setLoadedName(`${preset.brand} · ${preset.country} · ${preset.plant}`);
     setLoadedRowIndex(preset._rowIndex ?? null);
     setShowList(false);
@@ -1891,6 +1997,23 @@ export default function App() {
     showToast(t.updated(loadedName));
   };
 
+  const saveScenario = (slot) => {
+    const snap = {
+      label: loadedName || (lang === "ko" ? "시나리오" : "Scenario"),
+      capexStr: `$${c(Math.round(capex))}`,
+      bep: R.bep,
+      roi: R.finSav > 0 ? `${c(R.roiPct, 0)}%` : "—",
+      yr1: R.yr1Savings,
+      finSav: R.finSav,
+      annOpex: R.annOpex,
+      annDepr: R.annDepr,
+      annLaborBaseline: R.annLaborBaseline,
+    };
+    if (slot === "A") setScenarioA(snap);
+    else setScenarioB(snap);
+    showToast(lang === "ko" ? `✅ 시나리오 ${slot} 저장됨` : `✅ Scenario ${slot} saved`);
+  };
+
   const applyPricingCalc = () => {
     setCapexHW(Math.round(PC.hwTotal));
     setCapexNRE(Math.round(PC.totalNRE));
@@ -1899,6 +2022,7 @@ export default function App() {
     setDiffFactor(1.0);
     setOpexMode("area");
     setOpexArea(Math.round(PC.totalArea));
+    setOpexSwLicense(Math.round(PC.swLicense));
     setTab("sr");
     showToast(lang === "ko" ? "✅ SR Pricing 탭에 적용됨" : "✅ Applied to SR Pricing tab");
   };
@@ -1948,7 +2072,7 @@ export default function App() {
       const siteSup = opexArea * supportPerM2;
       const swUpd = opexArea * swUpdatePerM2;
       const overhaulAnn = (capexHW * overhaulRate / 100) / Math.max(1, overhaulCycle);
-      const opexDirect = hwWarranty + siteSup + swUpd + overhaulAnn;
+      const opexDirect = hwWarranty + siteSup + swUpd + overhaulAnn + opexSwLicense;
       annOpex = opexDirect * (1 + capexOverhead / 100) * (1 + capexMargin / 100);
     }
     const annSRTot = annDepr + annOpex;
@@ -1994,19 +2118,30 @@ export default function App() {
       wType, discount, wageMode, hrly, annWage, srch, infl,
       capex, life, opexMode, opexPM, opexArea, opexPerM2, srGrw, projYrs,
       capexHW, capexOverhead, capexMargin, diffFactor, hwWarrantyRate, supportPerM2,
-      swUpdatePerM2, overhaulRate, overhaulCycle, opexDiscount1, opexDiscountStep]);
+      swUpdatePerM2, overhaulRate, overhaulCycle, opexDiscount1, opexDiscountStep, opexSwLicense]);
 
   const PC = useMemo(() => {
-    const siteRows = sites.map(s => {
+    // baseLaborNRE = Σ(HC × MM × rate) from laborInputs
+    const baseLaborNRE = laborInputs.jr.hc  * laborInputs.jr.mm  * LABOR_RATES.jr
+                       + laborInputs.mid.hc * laborInputs.mid.mm * LABOR_RATES.mid
+                       + laborInputs.sr.hc  * laborInputs.sr.mm  * LABOR_RATES.sr;
+
+    const siteRowsRaw = sites.map(s => {
       const totalSize = s.type === "length" ? s.pathLen : s.width * s.height;
       const baseUnit  = NRE_BASE[s.type];
       const converted = totalSize / Math.max(1, baseUnit);
       const diffSum   = Object.values(s.diff).reduce((a,b) => a+b, 0);
       const df        = 1 + diffSum;
       const adjusted  = converted * df;
-      const nreAmt    = adjusted * NRE_UNIT[s.type];
-      return { ...s, totalSize, converted, df, adjusted, nreAmt };
+      return { ...s, totalSize, converted, df, adjusted, nreAmt: 0 };
     });
+
+    // Distribute baseLaborNRE proportionally by adjusted size × DF
+    const totalSizeAll = siteRowsRaw.reduce((s, r) => s + Math.max(r.totalSize, 1), 0);
+    const siteRows = siteRowsRaw.map(r => ({
+      ...r,
+      nreAmt: baseLaborNRE * (Math.max(r.totalSize, 1) / totalSizeAll) * r.df,
+    }));
 
     const totalNRE      = siteRows.reduce((s, r) => s + r.nreAmt, 0);
     const totalArea     = siteRows.reduce((s, r) => s + r.totalSize, 0);
@@ -2034,12 +2169,41 @@ export default function App() {
     const opexFinal  = opexDirect * (1 + capexOverhead / 100) * (1 + capexMargin / 100);
 
     return {
-      siteRows, totalNRE, totalArea, totalAdjusted,
+      siteRows, totalNRE, totalArea, totalAdjusted, baseLaborNRE,
       hwTotal, capexSub, capexWithOH, capexWithMgn, capexFinal,
       vw, swLicense, hwWarranty, siteSup, swUpd, overhaulA, opexDirect, opexFinal,
     };
   }, [sites, hwConfig, hwCounts, annThruput, capexOverhead, capexMargin, capexDiscount,
-      hwWarrantyRate, supportPerM2, swUpdatePerM2, overhaulRate, overhaulCycle]);
+      hwWarrantyRate, supportPerM2, swUpdatePerM2, overhaulRate, overhaulCycle, laborInputs]);
+
+  const sensitivityRows = useMemo(() => {
+    const compute = (capexMod, laborMod) => {
+      const modCapex = capex * capexMod;
+      const modAnnDepr = modCapex / Math.max(1, life);
+      let cumL = 0, cumS = 0, bep = "N/A";
+      for (let i = 0; i < projYrs; i++) {
+        const lb = R.annLaborBaseline * laborMod * Math.pow(1 + infl / 100, i);
+        const lr = R.annLaborRemaining * laborMod * Math.pow(1 + infl / 100, i);
+        const od = Math.max(0, opexDiscount1 - opexDiscountStep * i) / 100;
+        const opex = R.annOpex * (1 - od) * Math.pow(1 + srGrw / 100, i);
+        const depr = (i + 1) <= life ? modAnnDepr : 0;
+        cumL += lb;
+        cumS += lr + opex + depr;
+        if (bep === "N/A" && cumL - cumS > 0) bep = `Y${i + 1}`;
+      }
+      const savings = cumL - cumS;
+      const roi = modCapex > 0 ? (savings / modCapex) * 100 : 0;
+      return { bep, roi: Math.round(roi), savings: Math.round(savings) };
+    };
+    return [
+      { label: lang === "ko" ? "CAPEX −20%" : "CAPEX −20%", ...compute(0.8, 1.0), base: false },
+      { label: lang === "ko" ? "CAPEX −10%" : "CAPEX −10%", ...compute(0.9, 1.0), base: false },
+      { label: lang === "ko" ? "▶ 기준" : "▶ Base",          ...compute(1.0, 1.0), base: true  },
+      { label: lang === "ko" ? "인건비 +10%" : "Labor +10%", ...compute(1.0, 1.1), base: false },
+      { label: lang === "ko" ? "인건비 +20%" : "Labor +20%", ...compute(1.0, 1.2), base: false },
+    ];
+  }, [capex, life, projYrs, infl, srGrw, opexDiscount1, opexDiscountStep,
+      R.annLaborBaseline, R.annLaborRemaining, R.annOpex, lang]);
 
   const lbl = {
     laborBaseline:  lang === "ko" ? "기준 인건비 (100%)" : "Labor Baseline (100%)",
@@ -2077,6 +2241,7 @@ export default function App() {
         />
       )}
       {showChangelog && <ChangelogModal onClose={() => setShowChangelog(false)} lang={lang} />}
+      {showScenario && <ScenarioModal onClose={() => setShowScenario(false)} A={scenarioA} B={scenarioB} lang={lang} c={c} $c={$c} />}
       {showReport && (
         <ReportModal
           onClose={() => setShowReport(false)}
@@ -2362,6 +2527,7 @@ export default function App() {
                     <Row label={t.swUpdatePerM2} hint={t.swUpdatePerM2Hint}><Inp v={swUpdatePerM2} set={setSwUpdatePerM2} min={0} max={100} step={0.1} unit="$/m²" /></Row>
                     <Row label={t.overhaulRate} hint={t.overhaulRateHint}><Inp v={overhaulRate} set={setOverhaulRate} min={0} max={50} step={1} unit={t.pct} /></Row>
                     <Row label={t.overhaulCycle} hint={t.overhaulCycleHint}><Inp v={overhaulCycle} set={setOverhaulCycle} min={1} max={20} unit={t.yrsUnit} /></Row>
+                    <Row label={lang === "ko" ? "Operational License" : "Operational License"} hint={lang === "ko" ? "연간 SW 운영 라이센스 (Pricing Calc에서 자동 설정)" : "Annual SW operational license (auto-set via Apply from Pricing Calc)"}><Inp v={opexSwLicense} set={setOpexSwLicense} min={0} max={5000000} step={1000} unit={t.dollar} w="w-28" comma /></Row>
                     {opexMode === "area" && (
                       <div className="mt-2 bg-blue-50 rounded-lg p-3 text-xs">
                         <div className="font-bold text-blue-800 mb-2">{t.opexBreakdown}</div>
@@ -2369,7 +2535,8 @@ export default function App() {
                         <CR label={t.siteSupportLbl} value={$c(opexArea * supportPerM2)} />
                         <CR label={t.swUpdateLbl} value={$c(opexArea * swUpdatePerM2)} />
                         <CR label={t.overhaulLbl} value={$c((capexHW * overhaulRate / 100) / Math.max(1, overhaulCycle))} />
-                        <CR label={t.opexDirectLbl} value={$c(capexHW * hwWarrantyRate / 100 + opexArea * supportPerM2 + opexArea * swUpdatePerM2 + (capexHW * overhaulRate / 100) / Math.max(1, overhaulCycle))} col="text-gray-700" />
+                        {opexSwLicense > 0 && <CR label="Operational License" value={$c(opexSwLicense)} />}
+                        <CR label={t.opexDirectLbl} value={$c(capexHW * hwWarrantyRate / 100 + opexArea * supportPerM2 + opexArea * swUpdatePerM2 + (capexHW * overhaulRate / 100) / Math.max(1, overhaulCycle) + opexSwLicense)} col="text-gray-700" />
                       </div>
                     )}
                   </>
@@ -2445,6 +2612,41 @@ export default function App() {
                   diff:{outdoor:0,elevation:0,roadWidth:0.1,surface:0,complexity:0.1,paved:0,capacity:0.1}}])}
                   className="w-full border border-dashed border-blue-300 text-blue-500 text-xs py-2 rounded-lg hover:bg-blue-50 mb-3">{t.addSite}</button>
 
+                {/* NRE Labor Config */}
+                <div className="flex items-center justify-between mb-1">
+                  <div className="text-xs font-bold text-gray-400 uppercase tracking-wide">
+                    {lang === "ko" ? "🔧 NRE 인력 구성" : "🔧 NRE Labor Config"}
+                  </div>
+                  <button onClick={() => setLaborInputs(DEFAULT_LABOR)}
+                    className="text-xs text-gray-400 border border-gray-200 rounded px-2 py-0.5 hover:bg-gray-50">
+                    {lang === "ko" ? "기본값 초기화" : "Reset Defaults"}
+                  </button>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-2 mb-3 text-xs">
+                  <div className="grid grid-cols-5 gap-1 text-gray-400 font-semibold mb-1 px-1 text-center">
+                    <span className="col-span-2 text-left">{lang === "ko" ? "직급" : "Level"}</span>
+                    <span>HC</span>
+                    <span>MM</span>
+                    <span className="text-right">{lang === "ko" ? "소계" : "Subtotal"}</span>
+                  </div>
+                  {[
+                    { key: "jr",  label: lang === "ko" ? "Jr. 엔지니어" : "Jr. Engineer",  rate: LABOR_RATES.jr  },
+                    { key: "mid", label: lang === "ko" ? "Mid 엔지니어"  : "Mid Engineer",  rate: LABOR_RATES.mid },
+                    { key: "sr",  label: lang === "ko" ? "Sr. 엔지니어"  : "Sr. Engineer",  rate: LABOR_RATES.sr  },
+                  ].map(({ key, label, rate }) => (
+                    <div key={key} className="grid grid-cols-5 gap-1 items-center py-1 border-t border-gray-100">
+                      <span className="col-span-2 text-gray-600">{label}</span>
+                      <Inp v={laborInputs[key].hc} set={v => setLaborInputs(li => ({ ...li, [key]: { ...li[key], hc: v } }))} min={0} max={50} step={1} w="w-10" />
+                      <Inp v={laborInputs[key].mm} set={v => setLaborInputs(li => ({ ...li, [key]: { ...li[key], mm: v } }))} min={0} max={36} step={1} w="w-10" />
+                      <span className="text-right text-indigo-700 font-semibold">{$c(laborInputs[key].hc * laborInputs[key].mm * rate)}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between pt-1.5 border-t border-gray-200 font-bold text-indigo-800 mt-1">
+                    <span>{lang === "ko" ? "NRE 기본 인건비" : "Base Labor NRE"}</span>
+                    <span>{$c(PC.baseLaborNRE)}</span>
+                  </div>
+                </div>
+
                 {/* HW 구성 */}
                 <div className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">{t.hwSection}</div>
                 <div className="mb-2">
@@ -2484,7 +2686,7 @@ export default function App() {
                 <div className="flex gap-2 mb-3">
                   <button onClick={() => { const id=`custom_${Date.now()}`; setHwConfig([...hwConfig,{id,brand:"",label:"Custom HW",price:0}]); setHwCounts({...hwCounts,[id]:0}); }}
                     className="text-xs text-blue-500 border border-blue-200 rounded-lg px-2 py-1 hover:bg-blue-50">{t.addHwItem}</button>
-                  <button onClick={() => { const def = { xt32:6, ot128:0, qt128:0, zt128:0, server:0, etc:6 }; setHwConfig(DEFAULT_HW_CONFIG); setHwCounts(def); saveCalcCache({ sites, hwConfig: DEFAULT_HW_CONFIG, hwCounts: def, annThruput }); }}
+                  <button onClick={() => { const def = { xt32:6, ot128:0, qt128:0, zt128:0, server:0, etc:6 }; setHwConfig(DEFAULT_HW_CONFIG); setHwCounts(def); saveCalcCache({ sites, hwConfig: DEFAULT_HW_CONFIG, hwCounts: def, annThruput, laborInputs }); }}
                     className="text-xs text-gray-400 border border-gray-200 rounded-lg px-2 py-1 hover:bg-gray-50">{t.resetHwDefault}</button>
                 </div>
                 {/* HW Config Presets */}
@@ -2641,10 +2843,60 @@ export default function App() {
             </div>
           </div>
 
+          {/* Sensitivity Analysis */}
+          <div className="bg-white rounded-xl shadow-sm p-4">
+            <div className="font-bold text-gray-700 mb-3 text-sm">
+              {lang === "ko" ? "📊 민감도 분석" : "📊 Sensitivity Analysis"}
+              <span className="text-xs text-gray-400 font-normal ml-2">
+                {lang === "ko" ? "CAPEX / 인건비 변동 시나리오" : "CAPEX / Labor variation scenarios"}
+              </span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="text-left px-2 py-1.5 font-semibold text-gray-500">{lang === "ko" ? "시나리오" : "Scenario"}</th>
+                    <th className="text-center px-2 py-1.5 font-semibold text-gray-500">{lang === "ko" ? "손익분기점" : "Break-Even"}</th>
+                    <th className="text-center px-2 py-1.5 font-semibold text-gray-500">ROI %</th>
+                    <th className="text-right px-2 py-1.5 font-semibold text-gray-500">{lang === "ko" ? "누적 절감" : "Cum. Savings"}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sensitivityRows.map((row, i) => (
+                    <tr key={i} className={`border-t border-gray-50 ${row.base ? "bg-blue-50 font-semibold" : ""}`}>
+                      <td className={`px-2 py-1.5 ${row.base ? "text-blue-700" : "text-gray-600"}`}>{row.label}</td>
+                      <td className={`text-center px-2 py-1.5 ${row.base ? "text-blue-700" : "text-gray-500"}`}>{row.bep}</td>
+                      <td className={`text-center px-2 py-1.5 ${row.base ? "text-blue-700" : row.roi >= 0 ? "text-green-600" : "text-red-500"}`}>{row.roi}%</td>
+                      <td className={`text-right px-2 py-1.5 ${row.savings >= 0 ? (row.base ? "text-blue-700" : "text-green-600") : "text-red-500"}`}>
+                        {row.savings >= 0 ? `+$${c(row.savings)}` : `-$${c(Math.abs(row.savings))}`}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           <div className="grid grid-cols-3 gap-3">
             <KPI label={`${projYrs}${t.netSavings}`} value={R.finSav > 0 ? $M(R.finSav) : t.negative} sub={t.afterSRCost} hi={R.finSav > 0} />
             <KPI label={t.totalROI} value={R.finSav > 0 ? `${c(R.roiPct, 0)}%` : "—"} sub={`${t.vsCapex} ${projYrs} ${t.yrs}`} />
             <KPI label={t.maxAnnSavings} value={$M(R.annLaborBaseline - R.annSRTot)} sub={t.laborMinusSR} />
+          </div>
+
+          {/* Scenario Save & Compare */}
+          <div className="flex gap-2 justify-end">
+            <button onClick={() => saveScenario("A")}
+              className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
+              💾 {lang === "ko" ? "시나리오 A 저장" : "Save as A"}{scenarioA && <span className="text-green-600">✓</span>}
+            </button>
+            <button onClick={() => saveScenario("B")}
+              className="text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
+              💾 {lang === "ko" ? "시나리오 B 저장" : "Save as B"}{scenarioB && <span className="text-green-600">✓</span>}
+            </button>
+            <button onClick={() => setShowScenario(true)}
+              className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-3 py-1.5 rounded-lg transition-colors">
+              📊 {lang === "ko" ? "비교" : "Compare"}
+            </button>
           </div>
 
           {/* Analytics Deep Dive */}
