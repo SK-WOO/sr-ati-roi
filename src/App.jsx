@@ -1871,7 +1871,7 @@ export default function App() {
   const [hwWarrantyRate, setHwWarrantyRate] = useState(20);
   const [supportPerM2, setSupportPerM2] = useState(10.66);
   const [swUpdatePerM2, setSwUpdatePerM2] = useState(10.09);
-  const [overhaulRate, setOverhaulRate] = useState(10);
+  const [overhaulRate, setOverhaulRate] = useState(50);
   const [overhaulCycle, setOverhaulCycle] = useState(5);
   const [opexDiscount1, setOpexDiscount1] = useState(30);
   const [opexDiscountStep, setOpexDiscountStep] = useState(3);
@@ -1965,7 +1965,7 @@ export default function App() {
     setHwWarrantyRate(clamp(p.hwWarrantyRate ?? 20, 0, 50, 20));
     setSupportPerM2(clamp(p.supportPerM2 ?? 10.66, 0, 100, 10.66));
     setSwUpdatePerM2(clamp(p.swUpdatePerM2 ?? 10.09, 0, 100, 10.09));
-    setOverhaulRate(clamp(p.overhaulRate ?? 10, 0, 50, 10));
+    setOverhaulRate(clamp(p.overhaulRate ?? 50, 0, 100, 50));
     setOverhaulCycle(clamp(p.overhaulCycle ?? 5, 1, 20, 5));
     setOpexDiscount1(clamp(p.opexDiscount1 ?? 30, 0, 80, 30));
     setOpexDiscountStep(clamp(p.opexDiscountStep ?? 3, 0, 20, 3));
@@ -2542,7 +2542,7 @@ export default function App() {
                     <Row label={t.hwWarrantyRate} hint={t.hwWarrantyRateHint}><Inp v={hwWarrantyRate} set={setHwWarrantyRate} min={0} max={50} step={1} unit={t.pct} /></Row>
                     <Row label={t.supportPerM2} hint={t.supportPerM2Hint}><Inp v={supportPerM2} set={setSupportPerM2} min={0} max={100} step={0.1} unit="$/m²" /></Row>
                     <Row label={t.swUpdatePerM2} hint={t.swUpdatePerM2Hint}><Inp v={swUpdatePerM2} set={setSwUpdatePerM2} min={0} max={100} step={0.1} unit="$/m²" /></Row>
-                    <Row label={t.overhaulRate} hint={t.overhaulRateHint}><Inp v={overhaulRate} set={setOverhaulRate} min={0} max={50} step={1} unit={t.pct} /></Row>
+                    <Row label={t.overhaulRate} hint={t.overhaulRateHint}><Inp v={overhaulRate} set={setOverhaulRate} min={0} max={100} step={1} unit={t.pct} /></Row>
                     <Row label={t.overhaulCycle} hint={t.overhaulCycleHint}><Inp v={overhaulCycle} set={setOverhaulCycle} min={1} max={20} unit={t.yrsUnit} /></Row>
                     <Row label={lang === "ko" ? "Operational License" : "Operational License"} hint={lang === "ko" ? "연간 SW 운영 라이센스 (Pricing Calc에서 자동 설정)" : "Annual SW operational license (auto-set via Apply from Pricing Calc)"}><Inp v={opexSwLicense} set={setOpexSwLicense} min={0} max={5000000} step={1000} unit={t.dollar} w="w-28" comma /></Row>
                     {opexMode === "area" && (
