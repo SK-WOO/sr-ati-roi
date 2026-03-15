@@ -869,7 +869,7 @@ async function sheetsLoad(token) {
   const res = await fetch(`${SHEETS_BASE}/values/${SHEET_NAME}!A:I`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) throw new Error("Sheets read failed");
+  if (!res.ok) throw new Error(`${res.status}`);
   const data = await res.json();
   const rows = data.values || [];
   // 첫 행이 헤더가 아니면 초기화
@@ -1782,7 +1782,7 @@ export default function App() {
     setSheetsLoading(true);
     sheetsLoad(accessToken)
       .then(list => { setPresets(list); saveToStorage(list); })
-      .catch(() => showToast(t.sheetsLoadFail, false))
+      .catch((e) => showToast(`${t.sheetsLoadFail} (HTTP ${e.message})`, false))
       .finally(() => setSheetsLoading(false));
   }, [accessToken]);
 
