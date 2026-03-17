@@ -1,7 +1,26 @@
 // ── Version & Changelog ────────────────────────────────
-export const VERSION = "v1.10.0";
-export const BUILD_DATE = "2026-03-15";
+export const VERSION = "v1.10.1";
+export const BUILD_DATE = "2026-03-16";
 export const CHANGELOG = [
+  {
+    version: "v1.10.1", date: "2026-03-16",
+    en: [
+      "New: ? Help button — tab overview + latest release notes (auto-updates with CHANGELOG)",
+      "New: MANUAL_EN.md / MANUAL_KR.md — full Confluence manuals",
+      "Refactor: App.jsx split into 15 modules (3118 → 1311 lines)",
+      "Refactor: Chart.js removed — all charts now Recharts (-150KB bundle)",
+      "Fix: Quotation PDF — Overhead/Margin rows hidden from customer view",
+      "UX: Input guard rails — orange border + ⚠ when value out of range",
+    ],
+    ko: [
+      "신규: ? 도움말 버튼 — 탭 설명 + 최신 릴리즈 노트 (CHANGELOG 자동 반영)",
+      "신규: MANUAL_EN.md / MANUAL_KR.md — Confluence 업로드용 전체 매뉴얼",
+      "리팩토링: App.jsx 15개 모듈 분리 (3118 → 1311줄)",
+      "리팩토링: Chart.js 제거 → 전체 Recharts 통일 (번들 -150KB)",
+      "수정: 견적서 PDF — Overhead/Margin 행 고객 노출 제거",
+      "UX: 입력값 가드레일 — 범위 초과 시 주황 테두리 + ⚠ 표시",
+    ],
+  },
   {
     version: "v1.10.0", date: "2026-03-15",
     en: [

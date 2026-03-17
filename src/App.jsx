@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import {
   BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area,
@@ -37,7 +37,9 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [showChangelog, setShowChangelog] = useState(false);
 
-  const showToast = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 2500); };
+  const showToast = useCallback((msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 2500); }, []);
+  const tRef = useRef(t);
+  useEffect(() => { tRef.current = t; });
 
   // Sheets 연동: accessToken 확보되면 로드
   useEffect(() => {
@@ -45,9 +47,9 @@ export default function App() {
     setSheetsLoading(true);
     sheetsLoad(accessToken)
       .then(list => { setPresets(list); saveToStorage(list); })
-      .catch((e) => showToast(`${t.sheetsLoadFail} (HTTP ${e.message})`, false))
+      .catch((e) => showToast(`${tRef.current.sheetsLoadFail} (HTTP ${e.message})`, false))
       .finally(() => setSheetsLoading(false));
-  }, [accessToken]);
+  }, [accessToken, showToast]);
 
   const reloadFromSheets = async () => {
     if (!accessToken) return;
@@ -810,7 +812,7 @@ export default function App() {
                     <Row label={t.swUpdatePerM2} hint={t.swUpdatePerM2Hint}><Inp v={swUpdatePerM2} set={setSwUpdatePerM2} min={0} max={100} step={0.1} unit="$/m²" /></Row>
                     <Row label={t.overhaulRate} hint={t.overhaulRateHint}><Inp v={overhaulRate} set={setOverhaulRate} min={0} max={100} step={1} unit={t.pct} /></Row>
                     <Row label={t.overhaulCycle} hint={t.overhaulCycleHint}><Inp v={overhaulCycle} set={setOverhaulCycle} min={1} max={20} unit={t.yrsUnit} /></Row>
-                    <Row label={lang === "ko" ? "Operational License" : "Operational License"} hint={lang === "ko" ? "연간 SW 운영 라이센스 (Pricing Calc에서 자동 설정)" : "Annual SW operational license (auto-set via Apply from Pricing Calc)"}><Inp v={opexSwLicense} set={setOpexSwLicense} min={0} max={5000000} step={1000} unit={t.dollar} w="w-28" comma /></Row>
+                    <Row label={t.opexSwLicenseLbl} hint={t.opexSwLicenseHint}><Inp v={opexSwLicense} set={setOpexSwLicense} min={0} max={5000000} step={1000} unit={t.dollar} w="w-28" comma /></Row>
                     {opexMode === "area" && (
                       <div className="mt-2 bg-blue-50 rounded-lg p-3 text-xs">
                         <div className="font-bold text-blue-800 mb-2">{t.opexBreakdown}</div>
@@ -818,7 +820,7 @@ export default function App() {
                         <CR label={t.siteSupportLbl} value={$c(opexArea * supportPerM2)} />
                         <CR label={t.swUpdateLbl} value={$c(opexArea * swUpdatePerM2)} />
                         <CR label={t.overhaulLbl} value={$c((capexHW * overhaulRate / 100) / Math.max(1, overhaulCycle))} />
-                        {opexSwLicense > 0 && <CR label="Operational License" value={$c(opexSwLicense)} />}
+                        {opexSwLicense > 0 && <CR label={t.opexSwLicenseLbl} value={$c(opexSwLicense)} />}
                         <CR label={t.opexDirectLbl} value={$c(capexHW * hwWarrantyRate / 100 + opexArea * supportPerM2 + opexArea * swUpdatePerM2 + (capexHW * overhaulRate / 100) / Math.max(1, overhaulCycle) + opexSwLicense)} col="text-gray-700" />
                       </div>
                     )}
