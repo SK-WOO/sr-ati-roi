@@ -1600,12 +1600,7 @@ function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexI
         ["Hardware (HW)", `$${c(PC.hwTotal)}`],
         ["NRE — Site Engineering", `$${c(Math.round(PC.totalNRE))}`],
         ["Development License", `$${c(DEV_LICENSE_AMT)}`],
-        ["Subtotal", `$${c(Math.round(PC.capexSub))}`],
-        [`Overhead (+${capexOverhead}%)`, `$${c(Math.round(PC.capexSub*capexOverhead/100))}`],
-        [`Margin (+${capexMargin}%)`, `$${c(Math.round(PC.capexWithOH*capexMargin/100))}`],
-        [`First Plant Discount (−${capexDiscount}%)`, `−$${c(Math.round(PC.capexWithMgn*capexDiscount/100))}`],
       ],
-      didParseCell: (d) => { if (d.row.index===6) d.cell.styles.textColor=[22,163,74]; },
     });
     // CAPEX total highlight row
     autoTable(doc, { startY: doc.lastAutoTable.finalY, margin:{left:M,right:M}, theme:"plain",
@@ -1620,13 +1615,9 @@ function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexI
     doc.text("Annual OPEX", M, y); y += 3;
     autoTable(doc, { startY: y, margin:{left:M,right:M}, theme:"plain",
       styles:{fontSize:8.5,cellPadding:1.8},
-      columnStyles:{0:{cellWidth:110,textColor:[60,60,60]},1:{halign:"right",fontStyle:"bold",textColor:[30,30,30]}},
+      columnStyles:{0:{textColor:[60,60,60]}},
       body:[
-        ["HW Warranty", `$${c(Math.round(PC.hwWarranty))}`],
-        ["Site Support", `$${c(Math.round(PC.siteSup))}`],
-        ["SW Update & Maintenance", `$${c(Math.round(PC.swUpd))}`],
-        ["SW License", `$${c(Math.round(PC.swLicense))}`],
-        ["Overhaul (annualized)", `$${c(Math.round(PC.overhaulA))}`],
+        ["Includes: HW Warranty / Site Support / SW Update & Maintenance / SW License / Overhaul"],
       ],
     });
     autoTable(doc, { startY: doc.lastAutoTable.finalY, margin:{left:M,right:M}, theme:"plain",
