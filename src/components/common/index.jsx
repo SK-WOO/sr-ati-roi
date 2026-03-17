@@ -7,6 +7,15 @@ export function Inp({ v, set, min = 0, max = 1e9, step = 1, unit, w = "w-24", co
   const formatted = comma
     ? Number(v).toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec })
     : Number(v).toFixed(dec);
+
+  const draftNum = focused ? parseFloat(draft.replace(/,/g, "")) : NaN;
+  const outOfRange = focused && !isNaN(draftNum) && (draftNum < min || draftNum > max);
+  const atLimit = !focused && max < 1e8 && (v <= min || v >= max);
+
+  let borderClass = "border-gray-300 focus:border-blue-500";
+  if (outOfRange) borderClass = "border-orange-400 focus:border-orange-500";
+  else if (atLimit) borderClass = "border-yellow-400 focus:border-yellow-500";
+
   return (
     <div className="flex items-center gap-1 min-w-0">
       <input type="text" inputMode="decimal"
@@ -14,9 +23,11 @@ export function Inp({ v, set, min = 0, max = 1e9, step = 1, unit, w = "w-24", co
         onFocus={() => { setFocused(true); setDraft(String(v)); }}
         onChange={e => { const s = e.target.value.replace(/,/g, ""); setDraft(s); const n = parseFloat(s); if (!isNaN(n)) set(n); }}
         onBlur={() => { setFocused(false); const n = parseFloat(draft.replace(/,/g, "")); if (!isNaN(n)) set(Math.min(Math.max(n, min), max)); else set(v); }}
-        className={`${w} min-w-0 border border-gray-300 rounded px-2 py-1 text-sm text-right focus:outline-none focus:border-blue-500`}
+        title={outOfRange ? `Range: ${min} – ${max}` : undefined}
+        className={`${w} min-w-0 border ${borderClass} rounded px-2 py-1 text-sm text-right focus:outline-none`}
       />
       {unit && <span className="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">{unit}</span>}
+      {outOfRange && <span className="text-orange-400 text-xs flex-shrink-0" title={`Range: ${min} – ${max}`}>⚠</span>}
     </div>
   );
 }

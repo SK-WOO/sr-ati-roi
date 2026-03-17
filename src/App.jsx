@@ -1,14 +1,10 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import {
   BarChart, Bar, LineChart, Line,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area,
+  PieChart, Pie, Cell,
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
 } from "recharts";
-import {
-  Chart as ChartJS, ArcElement, Tooltip as CTooltip, Legend as CLegend,
-  CategoryScale, LinearScale, BarElement, Title, PointElement, LineElement, Filler, RadialLinearScale
-} from "chart.js";
-import { Doughnut, Bar as CBar, Radar } from "react-chartjs-2";
-ChartJS.register(ArcElement, CTooltip, CLegend, CategoryScale, LinearScale, BarElement, Title, PointElement, LineElement, Filler, RadialLinearScale);
 
 import useGoogleAuth from "./hooks/useGoogleAuth";
 import LoginScreen from "./components/LoginScreen";
@@ -1209,40 +1205,56 @@ export default function App() {
           <div className="bg-white rounded-xl shadow-sm p-4">
             <div className="font-bold text-gray-700 mb-4 text-sm">{t.analyticsTitle}</div>
             <div className="grid grid-cols-2 gap-6">
-              {/* Doughnut 1: CAPEX Breakdown */}
-              <div>
-                <div className="text-xs font-semibold text-gray-500 mb-2 text-center">{t.capexPieTitle}</div>
-                <div style={{height:180}}>
-                  <Doughnut data={{
-                    labels: ["HW", "NRE", "Installation", "Other", "Overhead", "Margin"],
-                    datasets: [{ data: [
-                      Math.max(0, capexHW),
-                      Math.max(0, capexNRE),
-                      Math.max(0, capexInst),
-                      Math.max(0, capexOther),
-                      Math.max(0, capexBase * capexOverhead / 100),
-                      Math.max(0, capexAfterOverhead * capexMargin / 100),
-                    ], backgroundColor: ["#3b82f6","#8b5cf6","#06b6d4","#f59e0b","#10b981","#f97316"],
-                    borderWidth: 1, hoverOffset: 4 }],
-                  }} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position:"right", labels:{ font:{size:10}, boxWidth:12 } }, tooltip: { callbacks: { label: ctx => ` $${c(ctx.raw)}` } } } }} />
-                </div>
-              </div>
-              {/* Doughnut 2: Annual Cost Mix */}
-              <div>
-                <div className="text-xs font-semibold text-gray-500 mb-2 text-center">{t.costPieTitle}</div>
-                <div style={{height:180}}>
-                  <Doughnut data={{
-                    labels: ["Remaining Labor","SR OPEX","SR Depreciation","Labor Saved"],
-                    datasets: [{ data: [
-                      Math.max(0, R.chart[0]?.["Remaining Labor"] || 0),
-                      Math.max(0, R.chart[0]?.["SR OPEX"] || 0),
-                      Math.max(0, R.chart[0]?.["SR Depreciation"] || 0),
-                      Math.max(0, (R.chart[0]?.["Labor Baseline"] || 0) - (R.chart[0]?.["Remaining Labor"] || 0)),
-                    ], backgroundColor: ["#f97316","#3b82f6","#93c5fd","#10b981"],
-                    borderWidth: 1, hoverOffset: 4 }],
-                  }} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position:"right", labels:{ font:{size:10}, boxWidth:12 } }, tooltip: { callbacks: { label: ctx => ` $${c(ctx.raw)}` } } } }} />
-                </div>
-              </div>
+              {/* Pie 1: CAPEX Breakdown */}
+              {(() => {
+                const capexPieData = [
+                  { name: "HW",           value: Math.max(0, capexHW) },
+                  { name: "NRE",          value: Math.max(0, capexNRE) },
+                  { name: "Installation", value: Math.max(0, capexInst) },
+                  { name: "Other",        value: Math.max(0, capexOther) },
+                  { name: "Overhead",     value: Math.max(0, capexBase * capexOverhead / 100) },
+                  { name: "Margin",       value: Math.max(0, capexAfterOverhead * capexMargin / 100) },
+                ];
+                const capexColors = ["#3b82f6","#8b5cf6","#06b6d4","#f59e0b","#10b981","#f97316"];
+                return (
+                  <div>
+                    <div className="text-xs font-semibold text-gray-500 mb-2 text-center">{t.capexPieTitle}</div>
+                    <ResponsiveContainer width="100%" height={180}>
+                      <PieChart>
+                        <Pie data={capexPieData} cx="40%" cy="50%" innerRadius={40} outerRadius={70} dataKey="value" paddingAngle={1}>
+                          {capexPieData.map((_, i) => <Cell key={i} fill={capexColors[i]} />)}
+                        </Pie>
+                        <Tooltip formatter={(v) => [`$${c(v)}`, ""]} />
+                        <Legend layout="vertical" align="right" verticalAlign="middle" iconSize={10} wrapperStyle={{fontSize:10}} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                );
+              })()}
+              {/* Pie 2: Annual Cost Mix */}
+              {(() => {
+                const costPieData = [
+                  { name: "Remaining Labor",  value: Math.max(0, R.chart[0]?.["Remaining Labor"] || 0) },
+                  { name: "SR OPEX",          value: Math.max(0, R.chart[0]?.["SR OPEX"] || 0) },
+                  { name: "SR Depreciation",  value: Math.max(0, R.chart[0]?.["SR Depreciation"] || 0) },
+                  { name: "Labor Saved",      value: Math.max(0, (R.chart[0]?.["Labor Baseline"] || 0) - (R.chart[0]?.["Remaining Labor"] || 0)) },
+                ];
+                const costColors = ["#f97316","#3b82f6","#93c5fd","#10b981"];
+                return (
+                  <div>
+                    <div className="text-xs font-semibold text-gray-500 mb-2 text-center">{t.costPieTitle}</div>
+                    <ResponsiveContainer width="100%" height={180}>
+                      <PieChart>
+                        <Pie data={costPieData} cx="40%" cy="50%" innerRadius={40} outerRadius={70} dataKey="value" paddingAngle={1}>
+                          {costPieData.map((_, i) => <Cell key={i} fill={costColors[i]} />)}
+                        </Pie>
+                        <Tooltip formatter={(v) => [`$${c(v)}`, ""]} />
+                        <Legend layout="vertical" align="right" verticalAlign="middle" iconSize={10} wrapperStyle={{fontSize:10}} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                );
+              })()}
               {/* Area Chart: Savings trajectory */}
               <div className="col-span-2">
                 <div className="text-xs font-semibold text-gray-500 mb-2">{t.cumSavingsTrajectory}</div>
@@ -1263,46 +1275,56 @@ export default function App() {
                 </ResponsiveContainer>
               </div>
               {/* Radar: ROI KPIs */}
-              <div className="col-span-2">
-                <div className="text-xs font-semibold text-gray-500 mb-2 text-center">{t.savingsRadarTitle}</div>
-                <div style={{height:200}}>
-                  <Radar data={{
-                    labels: lang==="ko"
-                      ? ["ROI %","BEP 속도","인건비절감%","OPEX 효율","1년차절감%","커버리지%"]
-                      : ["ROI %","BEP Speed","Labor Save%","OPEX Efficiency","Yr1 Savings%","Coverage%"],
-                    datasets: [{
-                      label: lang==="ko" ? "ROI 지표" : "ROI Metrics",
-                      data: [
-                        Math.min(100, Math.max(0, R.roiPct / 3)),
-                        R.bep === "N/A" ? 0 : Math.min(100, Math.max(0, (projYrs - parseInt(R.bep.replace("Y","")) + 1) / projYrs * 100)),
-                        Math.min(100, Math.max(0, (1 - R.annLaborRemaining / Math.max(1,R.annLaborBaseline)) * 100)),
-                        Math.min(100, Math.max(0, capex > 0 ? (1 - R.annOpex / Math.max(1,capex) * life) * 100 : 0)),
-                        Math.min(100, Math.max(0, R.yr1Savings > 0 ? Math.min(R.yr1Savings / Math.max(1,R.annLaborBaseline) * 200, 100) : 0)),
-                        Math.min(100, srRatio),
-                      ],
-                      backgroundColor: "rgba(59,130,246,0.15)", borderColor:"#3b82f6", pointBackgroundColor:"#3b82f6",
-                    }],
-                  }} options={{ responsive:true, maintainAspectRatio:false, scales:{ r:{ min:0, max:100, ticks:{stepSize:25,font:{size:9}}, pointLabels:{font:{size:10}} } }, plugins:{ legend:{display:false} } }} />
-                </div>
-              </div>
+              {(() => {
+                const radarLabels = lang==="ko"
+                  ? ["ROI %","BEP 속도","인건비절감%","OPEX 효율","1년차절감%","커버리지%"]
+                  : ["ROI %","BEP Speed","Labor Save%","OPEX Efficiency","Yr1 Savings%","Coverage%"];
+                const radarValues = [
+                  Math.min(100, Math.max(0, R.roiPct / 3)),
+                  R.bep === "N/A" ? 0 : Math.min(100, Math.max(0, (projYrs - parseInt(R.bep.replace("Y","")) + 1) / projYrs * 100)),
+                  Math.min(100, Math.max(0, (1 - R.annLaborRemaining / Math.max(1,R.annLaborBaseline)) * 100)),
+                  Math.min(100, Math.max(0, capex > 0 ? (1 - R.annOpex / Math.max(1,capex) * life) * 100 : 0)),
+                  Math.min(100, Math.max(0, R.yr1Savings > 0 ? Math.min(R.yr1Savings / Math.max(1,R.annLaborBaseline) * 200, 100) : 0)),
+                  Math.min(100, srRatio),
+                ];
+                const radarData = radarLabels.map((subject, i) => ({ subject, value: radarValues[i] }));
+                return (
+                  <div className="col-span-2">
+                    <div className="text-xs font-semibold text-gray-500 mb-2 text-center">{t.savingsRadarTitle}</div>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <RadarChart data={radarData} margin={{top:10,right:30,bottom:10,left:30}}>
+                        <PolarGrid />
+                        <PolarAngleAxis dataKey="subject" tick={{fontSize:10}} />
+                        <PolarRadiusAxis angle={30} domain={[0,100]} tick={{fontSize:9}} tickCount={5} />
+                        <Radar dataKey="value" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.15} />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  </div>
+                );
+              })()}
               {/* Horizontal bar: year-by-year savings */}
-              <div className="col-span-2">
-                <div className="text-xs font-semibold text-gray-500 mb-2">{t.annSavingsByYear}</div>
-                <div style={{height: Math.max(120, R.chart.length * 28)}}>
-                  <CBar data={{
-                    labels: R.chart.map(r=>r.year),
-                    datasets: [{
-                      label: lang==="ko" ? "연간 절감액" : "Annual Savings",
-                      data: R.chart.map(r => r["Labor Baseline"] - r["Remaining Labor"] - r["SR OPEX"] - r["SR Depreciation"]),
-                      backgroundColor: R.chart.map(r => (r["Labor Baseline"] - r["Remaining Labor"] - r["SR OPEX"] - r["SR Depreciation"]) > 0 ? "#10b981" : "#ef4444"),
-                      borderRadius: 4,
-                    }],
-                  }} options={{ indexAxis:"y", responsive:true, maintainAspectRatio:false,
-                    plugins:{ legend:{display:false}, tooltip:{callbacks:{label: ctx=>`$${c(ctx.raw)}`}} },
-                    scales:{ x:{ ticks:{callback:v=>`$${(v/1e6).toFixed(1)}M`,font:{size:10}}, grid:{color:"#f3f4f6"} }, y:{ticks:{font:{size:10}}} }
-                  }} />
-                </div>
-              </div>
+              {(() => {
+                const savingsBarData = R.chart.map(r => ({
+                  year: r.year,
+                  savings: r["Labor Baseline"] - r["Remaining Labor"] - r["SR OPEX"] - r["SR Depreciation"],
+                }));
+                return (
+                  <div className="col-span-2">
+                    <div className="text-xs font-semibold text-gray-500 mb-2">{t.annSavingsByYear}</div>
+                    <ResponsiveContainer width="100%" height={Math.max(120, R.chart.length * 28)}>
+                      <BarChart data={savingsBarData} layout="vertical" margin={{top:4,right:16,left:0,bottom:0}}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false}/>
+                        <XAxis type="number" tickFormatter={v=>`$${(v/1e6).toFixed(1)}M`} tick={{fontSize:10}}/>
+                        <YAxis type="category" dataKey="year" tick={{fontSize:10}} width={35}/>
+                        <Tooltip formatter={v=>[`$${c(v)}`,""]}/>
+                        <Bar dataKey="savings" radius={[0,4,4,0]}>
+                          {savingsBarData.map((entry, i) => <Cell key={i} fill={entry.savings > 0 ? "#10b981" : "#ef4444"} />)}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
