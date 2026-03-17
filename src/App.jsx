@@ -40,7 +40,7 @@ export default function App() {
 
   const showToast = useCallback((msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 2500); }, []);
   const tRef = useRef(t);
-  useEffect(() => { tRef.current = t; });
+  useEffect(() => { tRef.current = t; }, [t]);
 
   // Sheets 연동: accessToken 확보되면 로드
   useEffect(() => {
