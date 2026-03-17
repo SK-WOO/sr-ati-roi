@@ -25,3 +25,9 @@ dist-ssr
 
 .vercel
 .env*.local
+
+# Nissan Excel parsing scripts (temp, local only)
+*.xlsx
+*.ps1
+sheet*.xml
+ss.xml
