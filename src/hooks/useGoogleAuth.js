@@ -42,6 +42,14 @@ export default function useGoogleAuth() {
     return () => document.head.removeChild(script);
   }, []);
 
+  const requestSheetsToken = () => new Promise((resolve) => {
+    sheetsClientRef.current.callback = (r) => {
+      if (r.access_token) { setAccessToken(r.access_token); resolve(r.access_token); }
+      else resolve(null);
+    };
+    sheetsClientRef.current.requestAccessToken({ prompt: "" });
+  });
+
   const requestDriveToken = () => new Promise((resolve) => {
     driveClientRef.current.callback = (r) => {
       if (r.access_token) { setDriveToken(r.access_token); resolve(r.access_token); }
@@ -56,5 +64,5 @@ export default function useGoogleAuth() {
     setAccessToken(null);
     setDriveToken(null);
   };
-  return { user, ready, logout, accessToken, driveToken, requestDriveToken };
+  return { user, ready, logout, accessToken, driveToken, requestDriveToken, requestSheetsToken };
 }

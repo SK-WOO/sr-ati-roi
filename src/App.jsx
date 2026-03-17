@@ -20,10 +20,11 @@ import T from "./i18n";
 import { clamp, c, $c, $M } from "./utils/format";
 import { loadPresets, saveToStorage, loadHwPresets, saveHwPresets, loadCalcCache, saveCalcCache } from "./utils/storage";
 import { sheetsLoad, sheetsAppend, sheetsUpdateRow, sheetsDeleteRow } from "./utils/sheets";
+import { calcOpexArea } from "./utils/calc";
 
 export default function App() {
   // ── Google Auth ──
-  const { user: googleUser, ready: gsiReady, logout: googleLogout, accessToken, driveToken, requestDriveToken } = useGoogleAuth();
+  const { user: googleUser, ready: gsiReady, logout: googleLogout, accessToken, driveToken, requestDriveToken, requestSheetsToken } = useGoogleAuth();
 
   const [lang, setLang] = useState("en");
   const t = T[lang];
@@ -51,10 +52,25 @@ export default function App() {
       .finally(() => setSheetsLoading(false));
   }, [accessToken, showToast]);
 
+  // Sheets 호출 시 401 만료 → 자동 재인증 후 1회 재시도
+  const sheetsWithRetry = async (fn) => {
+    try { return await fn(accessToken); }
+    catch (e) {
+      if (!e.message.startsWith("401")) throw e;
+      showToast(tRef.current.sheetsTokenFail, true);
+      const newTok = await requestSheetsToken();
+      if (!newTok) throw e;
+      return await fn(newTok);
+    }
+  };
+
   const reloadFromSheets = async () => {
     if (!accessToken) return;
     setSheetsLoading(true);
-    try { const list = await sheetsLoad(accessToken); setPresets(list); saveToStorage(list); }
+    try {
+      const list = await sheetsWithRetry(tok => sheetsLoad(tok));
+      setPresets(list); saveToStorage(list);
+    }
     catch { showToast(t.sheetsRefreshFail, false); }
     finally { setSheetsLoading(false); }
   };
@@ -63,7 +79,7 @@ export default function App() {
     const newPreset = { ...p, id: String(Date.now()) };
     if (accessToken) {
       try {
-        await sheetsAppend(accessToken, newPreset);
+        await sheetsWithRetry(tok => sheetsAppend(tok, newPreset));
         await reloadFromSheets();
       } catch { showToast(t.storageFail, false); return; }
     } else {
@@ -78,7 +94,7 @@ export default function App() {
   const handleDeletePreset = async (preset) => {
     if (accessToken && preset._rowIndex) {
       try {
-        await sheetsDeleteRow(accessToken, preset._rowIndex);
+        await sheetsWithRetry(tok => sheetsDeleteRow(tok, preset._rowIndex));
         await reloadFromSheets();
       } catch { showToast(t.storageFail, false); }
     } else {
@@ -109,8 +125,6 @@ export default function App() {
   const [discount, setDiscount] = useState(0);
   const [wageMode, setWageMode] = useState("hourly");
   const [hrly, setHrly] = useState(22);
-  const [hpw, setHpw] = useState(40);
-  const [wpy, setWpy] = useState(50);
   const [annWage, setAnnWage] = useState(52000);
   const [srch, setSrch] = useState(30);
   const [infl, setInfl] = useState(3.0);
@@ -159,9 +173,23 @@ export default function App() {
   const [scenarioB, setScenarioB] = useState(null);
   const [showScenario, setShowScenario] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [sensitivityCapexStep, setSensitivityCapexStep] = useState(10);
+  const [sensitivityLaborStep, setSensitivityLaborStep] = useState(10);
+  const [cacheSaveStatus, setCacheSaveStatus] = useState(null); // null | 'saved' | 'quota'
+  const cacheSaveTimerRef = useRef(null);
 
   // Pricing Calc 상태 변경 시 자동 캐시 저장
-  useEffect(() => { saveCalcCache({ sites, hwConfig, hwCounts, annThruput, laborInputs }); }, [sites, hwConfig, hwCounts, annThruput, laborInputs]);
+  useEffect(() => {
+    const result = saveCalcCache({ sites, hwConfig, hwCounts, annThruput, laborInputs });
+    if (cacheSaveTimerRef.current) clearTimeout(cacheSaveTimerRef.current);
+    if (result === "quota") {
+      setCacheSaveStatus("quota");
+      showToast(tRef.current.quotaExceededWarn, false);
+    } else {
+      setCacheSaveStatus("saved");
+      cacheSaveTimerRef.current = setTimeout(() => setCacheSaveStatus(null), 2000);
+    }
+  }, [sites, hwConfig, hwCounts, annThruput, laborInputs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const cd = COUNTRIES[cKey];
   const capexBase = capexHW + capexNRE * diffFactor + capexInst + capexOther;
@@ -172,7 +200,7 @@ export default function App() {
   const currentParams = () => ({
     cKey, regDays, holDays, regHrs, otHrs, nShifts, capa, yld, srRatio,
     dist, spd, tPre, tPark, tWlk1, tHdwy, tRide, tWlk2, tOvhd,
-    wType, discount, wageMode, hrly, hpw, wpy, annWage, srch, infl,
+    wType, discount, wageMode, hrly, annWage, srch, infl,
     capexHW, capexNRE, capexInst, capexOther, capexMargin, life,
     opexMode, opexPM, opexArea, opexPerM2, srGrw, projYrs,
     capexOverhead, capexDiscount, diffFactor,
@@ -205,8 +233,6 @@ export default function App() {
     setDiscount(clamp(p.discount || 0, 0, 50, 0));
     if (["hourly","annual"].includes(p.wageMode)) setWageMode(p.wageMode);
     setHrly(clamp(p.hrly, 1, 500, 22));
-    setHpw(clamp(p.hpw, 10, 80, 40));
-    setWpy(clamp(p.wpy, 10, 52, 50));
     setAnnWage(clamp(p.annWage, 1000, 500000, 52000));
     setSrch(clamp(p.srch, 0, 100, 30));
     setInfl(clamp(p.infl, 0, 30, 3));
@@ -269,7 +295,7 @@ export default function App() {
     const updated = { ...existing, params: currentParams(), savedAt: new Date().toISOString() };
     if (accessToken) {
       try {
-        await sheetsUpdateRow(accessToken, loadedRowIndex, updated);
+        await sheetsWithRetry(tok => sheetsUpdateRow(tok, loadedRowIndex, updated));
         await reloadFromSheets();
       } catch { showToast(t.storageFail, false); return; }
     } else {
@@ -294,6 +320,23 @@ export default function App() {
     if (slot === "A") setScenarioA(snap);
     else setScenarioB(snap);
     showToast(lang === "ko" ? `✅ 시나리오 ${slot} 저장됨` : `✅ Scenario ${slot} saved`);
+  };
+
+  const downloadCSV = () => {
+    const headers = ["Year","Labor Baseline","Remaining Labor","SR OPEX","SR Depr.","SR Total","Cum. Savings","ROI %"];
+    const rows = R.chart.map(r => [
+      r.year, r["Labor Baseline"], r["Remaining Labor"], r["SR OPEX"],
+      r["SR Depreciation"], r["SR Total"], r.savings,
+      r.savings > 0 ? ((r.savings / capex) * 100).toFixed(1) : "0",
+    ]);
+    const csv = [headers, ...rows].map(row => row.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `SR-ROI_${(loadedName || "export").replace(/[^a-zA-Z0-9]/g,"_")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const applyPricingCalc = () => {
@@ -350,12 +393,11 @@ export default function App() {
     if (opexMode === "move") {
       annOpex = srCapa * opexPM;
     } else {
-      const hwWarranty = capexHW * (hwWarrantyRate / 100);
-      const siteSup = opexArea * supportPerM2;
-      const swUpd = opexArea * swUpdatePerM2;
-      const overhaulAnn = (capexHW * overhaulRate / 100) / Math.max(1, overhaulCycle);
-      const opexDirect = hwWarranty + siteSup + swUpd + overhaulAnn + opexSwLicense;
-      annOpex = opexDirect * (1 + capexOverhead / 100) * (1 + capexMargin / 100);
+      annOpex = calcOpexArea({
+        hwCost: capexHW, area: opexArea, hwWarrantyRate, supportPerM2, swUpdatePerM2,
+        overhaulRate, overhaulCycle, swLicense: opexSwLicense,
+        overhead: capexOverhead, margin: capexMargin,
+      }).opexFinal;
     }
     const annSRTot = annDepr + annOpex;
     const inflR = infl / 100, srGrwR = srGrw / 100;
@@ -408,7 +450,7 @@ export default function App() {
 
     const siteRowsRaw = sites.map(s => {
       const totalSize = s.type === "length" ? s.pathLen : s.width * s.height;
-      const baseUnit  = NRE_BASE[s.type];
+      const baseUnit  = NRE_BASE[s.type] ?? 1;
       const converted = totalSize / Math.max(1, baseUnit);
       const diffSum   = Object.values(s.diff).reduce((a,b) => a+b, 0);
       const df        = 1 + diffSum;
@@ -441,17 +483,18 @@ export default function App() {
              : annThruput < 500000 ? 1.08 : 1.09;
     const swLicense = totalAdjusted * (siteRows[0]?.type === "length" ? 62.5 : 1250) * vw;
 
-    const hwWarranty = hwTotal * (hwWarrantyRate / 100);
-    const siteSup    = totalArea * supportPerM2;
-    const swUpd      = totalArea * swUpdatePerM2;
-    const overhaulA  = (hwTotal * overhaulRate / 100) / Math.max(1, overhaulCycle);
-    const opexDirect = hwWarranty + siteSup + swUpd + overhaulA + swLicense;
-    const opexFinal  = opexDirect * (1 + capexOverhead / 100) * (1 + capexMargin / 100);
+    const opex = calcOpexArea({
+      hwCost: hwTotal, area: totalArea, hwWarrantyRate, supportPerM2, swUpdatePerM2,
+      overhaulRate, overhaulCycle, swLicense,
+      overhead: capexOverhead, margin: capexMargin,
+    });
 
     return {
       siteRows, totalNRE, totalArea, totalAdjusted, baseLaborNRE,
       hwTotal, capexSub, capexWithOH, capexWithMgn, capexFinal,
-      vw, swLicense, hwWarranty, siteSup, swUpd, overhaulA, opexDirect, opexFinal,
+      vw, swLicense,
+      hwWarranty: opex.hwWarranty, siteSup: opex.siteSup, swUpd: opex.swUpd,
+      overhaulA: opex.overhaulAnn, opexDirect: opex.opexDirect, opexFinal: opex.opexFinal,
     };
   }, [sites, hwConfig, hwCounts, annThruput, capexOverhead, capexMargin, capexDiscount,
       hwWarrantyRate, supportPerM2, swUpdatePerM2, overhaulRate, overhaulCycle, laborInputs]);
@@ -475,15 +518,18 @@ export default function App() {
       const roi = modCapex > 0 ? (savings / modCapex) * 100 : 0;
       return { bep, roi: Math.round(roi), savings: Math.round(savings) };
     };
+    const cs = sensitivityCapexStep / 100;
+    const ls = sensitivityLaborStep / 100;
     return [
-      { label: lang === "ko" ? "CAPEX −20%" : "CAPEX −20%", ...compute(0.8, 1.0), base: false },
-      { label: lang === "ko" ? "CAPEX −10%" : "CAPEX −10%", ...compute(0.9, 1.0), base: false },
-      { label: lang === "ko" ? "▶ 기준" : "▶ Base",          ...compute(1.0, 1.0), base: true  },
-      { label: lang === "ko" ? "인건비 +10%" : "Labor +10%", ...compute(1.0, 1.1), base: false },
-      { label: lang === "ko" ? "인건비 +20%" : "Labor +20%", ...compute(1.0, 1.2), base: false },
+      { label: lang === "ko" ? `CAPEX −${sensitivityCapexStep * 2}%` : `CAPEX −${sensitivityCapexStep * 2}%`, ...compute(1 - cs * 2, 1.0), base: false },
+      { label: lang === "ko" ? `CAPEX −${sensitivityCapexStep}%`     : `CAPEX −${sensitivityCapexStep}%`,     ...compute(1 - cs,     1.0), base: false },
+      { label: lang === "ko" ? "▶ 기준" : "▶ Base",                                                           ...compute(1.0,        1.0), base: true  },
+      { label: lang === "ko" ? `인건비 +${sensitivityLaborStep}%`     : `Labor +${sensitivityLaborStep}%`,     ...compute(1.0, 1 + ls),     base: false },
+      { label: lang === "ko" ? `인건비 +${sensitivityLaborStep * 2}%` : `Labor +${sensitivityLaborStep * 2}%`, ...compute(1.0, 1 + ls * 2), base: false },
     ];
   }, [capex, life, projYrs, infl, srGrw, opexDiscount1, opexDiscountStep,
-      R.annLaborBaseline, R.annLaborRemaining, R.annOpex, lang]);
+      R.annLaborBaseline, R.annLaborRemaining, R.annOpex, lang,
+      sensitivityCapexStep, sensitivityLaborStep]);
 
   const lbl = {
     laborBaseline:  lang === "ko" ? "기준 인건비 (100%)" : "Labor Baseline (100%)",
@@ -589,16 +635,22 @@ export default function App() {
             </div>
           </div>
         </div>
-        {loadedName && (
-          <div className="max-w-6xl mx-auto mt-2">
+        <div className="max-w-6xl mx-auto mt-2 flex flex-wrap items-center gap-2">
+          {cacheSaveStatus === "saved" && (
+            <span className="text-xs text-green-300 bg-blue-800 rounded-lg px-2 py-1">{t.autoSaved}</span>
+          )}
+          {cacheSaveStatus === "quota" && (
+            <span className="text-xs text-red-300 bg-blue-800 rounded-lg px-2 py-1">{t.quotaExceededWarn}</span>
+          )}
+          {loadedName && (
             <div className="text-xs bg-blue-800 rounded-lg px-3 py-1.5 inline-flex flex-wrap items-center gap-2">
               <span className="text-blue-300">{t.loaded}</span>
               <span className="text-white font-semibold">{loadedName}</span>
               <button onClick={handleUpdatePreset} className="bg-green-500 hover:bg-green-600 text-white text-xs px-2 py-1 rounded ml-1">{t.update}</button>
               <button onClick={() => { setLoadedName(null); setLoadedRowIndex(null); }} className="text-blue-400 hover:text-white ml-1">✕</button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <div className="max-w-6xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-5 gap-6">
@@ -1117,7 +1169,10 @@ export default function App() {
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-4">
-            <div className="font-bold text-gray-700 mb-3 text-sm">{t.tableTitle}</div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="font-bold text-gray-700 text-sm">{t.tableTitle}</div>
+              <button onClick={downloadCSV} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded-lg transition-colors">{t.csvExport}</button>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-[11px]" style={{minWidth:"580px"}}>
                 <thead>
@@ -1149,11 +1204,23 @@ export default function App() {
 
           {/* Sensitivity Analysis */}
           <div className="bg-white rounded-xl shadow-sm p-4">
-            <div className="font-bold text-gray-700 mb-3 text-sm">
-              {lang === "ko" ? "📊 민감도 분석" : "📊 Sensitivity Analysis"}
-              <span className="text-xs text-gray-400 font-normal ml-2">
-                {lang === "ko" ? "CAPEX / 인건비 변동 시나리오" : "CAPEX / Labor variation scenarios"}
-              </span>
+            <div className="flex flex-wrap items-center gap-3 mb-3">
+              <div className="font-bold text-gray-700 text-sm">
+                {lang === "ko" ? "📊 민감도 분석" : "📊 Sensitivity Analysis"}
+              </div>
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <span>CAPEX</span>
+                <div className="flex items-center gap-1">
+                  <Inp v={sensitivityCapexStep} set={setSensitivityCapexStep} min={1} max={50} step={1} w="w-12" />
+                  <span>%</span>
+                </div>
+                <span className="text-gray-300">|</span>
+                <span>{lang === "ko" ? "인건비" : "Labor"}</span>
+                <div className="flex items-center gap-1">
+                  <Inp v={sensitivityLaborStep} set={setSensitivityLaborStep} min={1} max={50} step={1} w="w-12" />
+                  <span>%</span>
+                </div>
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">

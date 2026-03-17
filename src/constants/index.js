@@ -1,7 +1,30 @@
 // ── Version & Changelog ────────────────────────────────
-export const VERSION = "v1.10.1";
-export const BUILD_DATE = "2026-03-16";
+export const VERSION = "v1.11.0";
+export const BUILD_DATE = "2026-03-17";
 export const CHANGELOG = [
+  {
+    version: "v1.11.0", date: "2026-03-17",
+    en: [
+      "Fix: NRE_BASE null-safety guard (prevents NaN cascade on unknown site type)",
+      "Fix: localStorage QuotaExceededError — warning toast instead of silent fail",
+      "Fix: Sheets 401 token expiry — auto re-auth & retry (matches Drive behavior)",
+      "Fix: Remove dead hpw/wpy state from preset serialization",
+      "New: CSV export button on Year-by-Year ROI table",
+      "New: Auto-saved indicator badge (calc cache status)",
+      "New: Sensitivity Analysis — configurable variation % (was hardcoded ±10/20%)",
+      "New: Preset JSON export per card / import from file",
+    ],
+    ko: [
+      "수정: NRE_BASE null 안전 처리 (알 수 없는 사이트 타입 시 NaN 전파 방지)",
+      "수정: localStorage 용량 초과 오류 — 무음 실패 대신 경고 토스트",
+      "수정: Sheets 401 토큰 만료 — 자동 재인증 및 재시도 (Drive와 동일)",
+      "수정: 프리셋 직렬화에서 미사용 hpw/wpy 상태 제거",
+      "신규: 연도별 ROI 테이블 CSV 내보내기 버튼",
+      "신규: 자동저장 표시 배지 (calc cache 상태)",
+      "신규: 민감도 분석 — 변동폭 % 직접 설정 (기존 ±10/20% 고정값)",
+      "신규: 프리셋 카드별 JSON 내보내기 / 파일 가져오기",
+    ],
+  },
   {
     version: "v1.10.1", date: "2026-03-16",
     en: [

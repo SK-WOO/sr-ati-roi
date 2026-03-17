@@ -291,6 +291,14 @@ const T = {
     annSavingsByYear: "💰 Annual Savings by Year",
     // OPEX area hint
     opexAreaHint: (area) => `${area} m² (warranty+support+SW+OH)`,
+    // v1.11.0
+    csvExport: "📥 CSV",
+    autoSaved: "💾 Saved",
+    quotaExceededWarn: "⚠ Storage full — calc data not saved",
+    importPreset: "📂 Import",
+    exportPreset: "↓ Export",
+    sensitivityStep: "Variation %",
+    sheetsTokenFail: "Sheets session expired — re-authenticating…",
   },
   ko: {
     title: "SR ATI ROI 계산기",
@@ -584,6 +592,14 @@ const T = {
     annSavingsByYear: "💰 연도별 절감액",
     // OPEX area hint
     opexAreaHint: (area) => `${area} m² (보증+지원+SW+OH)`,
+    // v1.11.0
+    csvExport: "📥 CSV",
+    autoSaved: "💾 저장됨",
+    quotaExceededWarn: "⚠ 저장공간 부족 — 데이터 미저장",
+    importPreset: "📂 가져오기",
+    exportPreset: "↓ 내보내기",
+    sensitivityStep: "변동폭 %",
+    sheetsTokenFail: "Sheets 세션 만료 — 재인증 중…",
   }
 };
 
