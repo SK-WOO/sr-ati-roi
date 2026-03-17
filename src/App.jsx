@@ -89,7 +89,7 @@ export default function App() {
 
   const [cKey, setCKey] = useState("US");
   const [regDays, setRegDays] = useState(250);
-  const [holDays, setHolDays] = useState(11);
+  const [holDays, setHolDays] = useState(18);
   const [regHrs, setRegHrs] = useState(8);
   const [otHrs, setOtHrs] = useState(2);
   const [nShifts, setNShifts] = useState(2);
@@ -185,7 +185,7 @@ export default function App() {
     const p = preset.params;
     if (Object.keys(COUNTRIES).includes(p.cKey)) setCKey(p.cKey);
     setRegDays(clamp(p.regDays, 100, 300, 250));
-    setHolDays(clamp(p.holDays, 0, 100, 11));
+    setHolDays(clamp(p.holDays, 0, 100, 18));
     setRegHrs(clamp(p.regHrs, 4, 12, 8));
     setOtHrs(clamp(p.otHrs, 0, 6, 2));
     setNShifts(clamp(p.nShifts, 1, 3, 2));
@@ -259,7 +259,7 @@ export default function App() {
 
   const handleCountry = (key) => {
     const co = COUNTRIES[key];
-    setCKey(key); setAnnWage(co.avgWage); setSrch(co.surcharge); setInfl(co.inflation); setHolDays(co.holidays);
+    setCKey(key); setAnnWage(co.avgWage); setSrch(co.surcharge); setInfl(co.inflation);
   };
 
   const handleUpdatePreset = async () => {
@@ -310,7 +310,7 @@ export default function App() {
   };
 
   const R = useMemo(() => {
-    const effDays = Math.max(1, regDays + holDays - cd.holidays);
+    const effDays = Math.max(1, regDays + holDays);
     const hps = regHrs + otHrs;
     const totHrs = effDays * hps * nShifts;
     const uph = totHrs > 0 ? capa / (totHrs * (yld / 100)) : 0;
