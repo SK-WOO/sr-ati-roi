@@ -64,29 +64,40 @@ export default function App() {
     }
   };
 
-  const reloadFromSheets = async () => {
-    if (!accessToken) return;
+  // Sheets 재로드 후 syncId 기준으로 loadedRowIndex 갱신 (팀 공유로 rowIndex 밀릴 수 있음)
+  const reloadAndSync = async (syncId) => {
+    if (!accessToken) return null;
     setSheetsLoading(true);
     try {
       const list = await sheetsWithRetry(tok => sheetsLoad(tok));
       setPresets(list); saveToStorage(list);
+      const idToSync = syncId ?? loadedId;
+      if (idToSync) {
+        const fresh = list.find(p => p.id === idToSync);
+        setLoadedRowIndex(fresh?._rowIndex ?? null);
+      }
+      return list;
     }
-    catch { showToast(t.sheetsRefreshFail, false); }
+    catch (e) { showToast(`${tRef.current.sheetsRefreshFail} — ${e.message}`, false); return null; }
     finally { setSheetsLoading(false); }
   };
+
+  // 수동 새로고침 (프리셋 패널 🔄 버튼)
+  const reloadFromSheets = () => reloadAndSync();
 
   const handleSavePreset = async (p) => {
     const newPreset = { ...p, id: String(Date.now()) };
     if (accessToken) {
       try {
         await sheetsWithRetry(tok => sheetsAppend(tok, newPreset));
-        await reloadFromSheets();
-      } catch { showToast(t.storageFail, false); return; }
+        await reloadAndSync(newPreset.id);
+      } catch (e) { showToast(`${t.storageFail} — ${e.message}`, false); return; }
     } else {
       const next = [...presets, newPreset];
       setPresets(next); saveToStorage(next);
     }
     setShowSave(false);
+    setLoadedId(newPreset.id);
     setLoadedName(`${p.brand} · ${p.country} · ${p.plant}`);
     showToast(t.presetSaved);
   };
@@ -95,8 +106,9 @@ export default function App() {
     if (accessToken && preset._rowIndex) {
       try {
         await sheetsWithRetry(tok => sheetsDeleteRow(tok, preset._rowIndex));
-        await reloadFromSheets();
-      } catch { showToast(t.storageFail, false); }
+        if (preset.id === loadedId) { setLoadedId(null); setLoadedRowIndex(null); setLoadedName(null); }
+        await reloadAndSync();
+      } catch (e) { showToast(`${t.storageFail} — ${e.message}`, false); }
     } else {
       const next = presets.filter(p => p.id !== preset.id);
       setPresets(next); saveToStorage(next);
@@ -173,6 +185,7 @@ export default function App() {
   const [scenarioB, setScenarioB] = useState(null);
   const [showScenario, setShowScenario] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [loadedId, setLoadedId] = useState(null);
   const [sensitivityCapexStep, setSensitivityCapexStep] = useState(10);
   const [sensitivityLaborStep, setSensitivityLaborStep] = useState(10);
   const [cacheSaveStatus, setCacheSaveStatus] = useState(null); // null | 'saved' | 'quota'
@@ -279,6 +292,7 @@ export default function App() {
       }
     }
     setLoadedName(`${preset.brand} · ${preset.country} · ${preset.plant}`);
+    setLoadedId(preset.id ?? null);
     setLoadedRowIndex(preset._rowIndex ?? null);
     setShowList(false);
   };
@@ -296,8 +310,8 @@ export default function App() {
     if (accessToken) {
       try {
         await sheetsWithRetry(tok => sheetsUpdateRow(tok, loadedRowIndex, updated));
-        await reloadFromSheets();
-      } catch { showToast(t.storageFail, false); return; }
+        await reloadAndSync();
+      } catch (e) { showToast(`${t.storageFail} — ${e.message}`, false); return; }
     } else {
       const next = presets.map(p => p._rowIndex === loadedRowIndex ? updated : p);
       setPresets(next); saveToStorage(next);
@@ -647,7 +661,7 @@ export default function App() {
               <span className="text-blue-300">{t.loaded}</span>
               <span className="text-white font-semibold">{loadedName}</span>
               <button onClick={handleUpdatePreset} className="bg-green-500 hover:bg-green-600 text-white text-xs px-2 py-1 rounded ml-1">{t.update}</button>
-              <button onClick={() => { setLoadedName(null); setLoadedRowIndex(null); }} className="text-blue-400 hover:text-white ml-1">✕</button>
+              <button onClick={() => { setLoadedName(null); setLoadedId(null); setLoadedRowIndex(null); }} className="text-blue-400 hover:text-white ml-1">✕</button>
             </div>
           )}
         </div>
