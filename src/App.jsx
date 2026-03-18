@@ -15,6 +15,7 @@ import ChangelogModal from "./components/modals/ChangelogModal";
 import HelpModal from "./components/modals/HelpModal";
 import ScenarioModal from "./components/modals/ScenarioModal";
 import ReportModal from "./components/modals/ReportModal";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { VERSION, BUILD_DATE, DEFAULT_HW_CONFIG, DEFAULT_LABOR, NRE_BASE, DEV_LICENSE_AMT, COUNTRIES } from "./constants";
 import T from "./i18n";
 import { clamp, c, $c, $M } from "./utils/format";
@@ -220,6 +221,7 @@ export default function App() {
     hwWarrantyRate, supportPerM2, swUpdatePerM2, overhaulRate, overhaulCycle,
     opexDiscount1, opexDiscountStep, opexSwLicense,
     laborInputs,
+    sites, hwConfig, hwCounts, annThruput,
   });
 
   const loadPreset = (preset) => {
@@ -291,6 +293,41 @@ export default function App() {
         })));
       }
     }
+    // Pricing Calc 상태 복원
+    if (Array.isArray(p.sites) && p.sites.length > 0) {
+      setSites(p.sites.map(s => ({
+        id: s.id || Date.now(),
+        name: s.name || "Site",
+        type: ["area", "length"].includes(s.type) ? s.type : "area",
+        pathLen: clamp(s.pathLen ?? 0, 0, 10000, 0),
+        width:   clamp(s.width   ?? 40, 0, 1000, 40),
+        height:  clamp(s.height  ?? 35, 0, 1000, 35),
+        diff: {
+          outdoor:    clamp(s.diff?.outdoor    ?? 0, 0, 0.1, 0),
+          elevation:  clamp(s.diff?.elevation  ?? 0, 0, 0.3, 0),
+          roadWidth:  clamp(s.diff?.roadWidth  ?? 0, 0, 0.3, 0),
+          surface:    clamp(s.diff?.surface    ?? 0, 0, 0.3, 0),
+          complexity: clamp(s.diff?.complexity ?? 0, 0, 0.3, 0),
+          paved:      clamp(s.diff?.paved      ?? 0, 0, 0.1, 0),
+          capacity:   clamp(s.diff?.capacity   ?? 0, 0, 0.3, 0),
+        },
+      })));
+    }
+    if (Array.isArray(p.hwConfig) && p.hwConfig.length > 0) {
+      setHwConfig(p.hwConfig.map(h => ({
+        id: h.id || `custom_${Date.now()}`,
+        brand: h.brand || "", label: h.label || "HW",
+        price: clamp(h.price ?? 0, 0, 500000, 0),
+      })));
+    }
+    if (p.hwCounts && typeof p.hwCounts === "object" && !Array.isArray(p.hwCounts)) {
+      const validated = Object.fromEntries(
+        Object.entries(p.hwCounts).map(([k, v]) => [k, clamp(v, 0, 500, 0)])
+      );
+      setHwCounts(validated);
+    }
+    if (p.annThruput != null) setAnnThruput(clamp(p.annThruput, 0, 2000000, 300000));
+
     setLoadedName(`${preset.brand} · ${preset.country} · ${preset.plant}`);
     setLoadedId(preset.id ?? null);
     setLoadedRowIndex(preset._rowIndex ?? null);
@@ -709,6 +746,7 @@ export default function App() {
               ))}
             </div>
             <div className="p-4">
+              <ErrorBoundary key={tab} label={`Tab: ${tab}`}>
               {tab === "prod" && <>
                 <SecHead n="1" title={t.prodTitle} sub={t.prodSub} />
                 <Row label={t.regDays}><Inp v={regDays} set={setRegDays} min={100} max={300} unit={t.days} /></Row>
@@ -1134,11 +1172,13 @@ export default function App() {
                   {t.applyBtn}
                 </button>
               </>}
+              </ErrorBoundary>
             </div>
           </div>
         </div>
 
         {/* RIGHT */}
+        <ErrorBoundary label="ROI charts & table">
         <div className="lg:col-span-3 space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <KPI label={t.backCalcUPHkpi} value={`${R.uph.toFixed(1)}/h`}         sub={t.reqUnitsHr} />
@@ -1411,6 +1451,7 @@ export default function App() {
             </div>
           </div>
         </div>
+        </ErrorBoundary>
       </div>
     </div>
   );

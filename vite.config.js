@@ -4,4 +4,14 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-charts": ["recharts"],
+          "vendor-pdf":    ["jspdf", "jspdf-autotable", "html2canvas"],
+        },
+      },
+    },
+  },
 })

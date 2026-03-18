@@ -1,7 +1,20 @@
 // ── Version & Changelog ────────────────────────────────
-export const VERSION = "v1.11.0";
-export const BUILD_DATE = "2026-03-17";
+export const VERSION = "v1.11.1";
+export const BUILD_DATE = "2026-03-18";
 export const CHANGELOG = [
+  {
+    version: "v1.11.1", date: "2026-03-18",
+    en: [
+      "Fix: Pricing Calc state (sites/hwConfig/hwCounts/annThruput) now saved & restored in presets",
+      "New: React Error Boundary on tab panel & ROI charts (prevents full white-screen on render error)",
+      "Perf: Vite manualChunks — main bundle 1174KB → 318KB (charts & PDF split into separate chunks)",
+    ],
+    ko: [
+      "수정: Pricing Calc 상태(sites/hwConfig/hwCounts/annThruput) 프리셋에 저장 및 복원",
+      "신규: React Error Boundary — 탭/ROI 차트 영역 (렌더링 오류 시 흰 화면 방지)",
+      "성능: Vite manualChunks — 메인 번들 1174KB → 318KB (차트·PDF 별도 청크 분리)",
+    ],
+  },
   {
     version: "v1.11.0", date: "2026-03-17",
     en: [
