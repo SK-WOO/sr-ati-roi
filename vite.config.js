@@ -9,7 +9,6 @@ export default defineConfig({
       output: {
         manualChunks: {
           "vendor-charts": ["recharts"],
-          "vendor-pdf":    ["jspdf", "jspdf-autotable", "html2canvas"],
         },
       },
     },

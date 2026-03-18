@@ -1,7 +1,22 @@
 // ── Version & Changelog ────────────────────────────────
-export const VERSION = "v1.11.1";
+export const VERSION = "v1.12.0";
 export const BUILD_DATE = "2026-03-18";
 export const CHANGELOG = [
+  {
+    version: "v1.12.0", date: "2026-03-18",
+    en: [
+      "New: Sensitivity Analysis table added to Internal Report PDF",
+      "Perf: jsPDF lazy-loaded (dynamic import) — faster initial load",
+      "Fix: sheetsWithRetry wrapped in useCallback (stable reference)",
+      "Fix: eslint-disable removed — showToast added to useEffect deps",
+    ],
+    ko: [
+      "신규: 내부 보고서 PDF에 민감도 분석 테이블 추가",
+      "성능: jsPDF 지연 로딩 (dynamic import) — 초기 로드 속도 개선",
+      "수정: sheetsWithRetry useCallback 적용 (안정적 참조)",
+      "수정: eslint-disable 제거 — showToast useEffect 의존성 추가",
+    ],
+  },
   {
     version: "v1.11.1", date: "2026-03-18",
     en: [

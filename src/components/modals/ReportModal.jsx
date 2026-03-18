@@ -1,6 +1,4 @@
 import { useState } from "react";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import { VERSION, BUILD_DATE, DEV_LICENSE_AMT } from "../../constants";
 import { c } from "../../utils/format";
 import { uploadToDrive } from "../../utils/drive";
@@ -8,6 +6,7 @@ import { uploadToDrive } from "../../utils/drive";
 export default function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexInst, capexOther,
   capexBase, capexAfterOverhead, capexAfterMargin, capexOverhead, capexMargin, capexDiscount,
   opexMode, opexArea, life, projYrs, loadedName, googleUser, hwConfig, hwCounts, sites,
+  sensitivityRows,
   driveToken, requestDriveToken }) {
   const [mode, setMode] = useState("internal");
   const [author, setAuthor] = useState(googleUser?.name || "");
@@ -19,7 +18,9 @@ export default function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, c
   const [salesRep, setSalesRep] = useState(googleUser?.name || "");
   const [validDays, setValidDays] = useState(30);
 
-  const buildInternalPdf = () => {
+  const buildInternalPdf = async () => {
+    const { default: jsPDF } = await import("jspdf");
+    const { default: autoTable } = await import("jspdf-autotable");
     const doc = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
     const now = new Date();
     const dateStr = now.toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
@@ -117,6 +118,33 @@ export default function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, c
     });
     y = doc.lastAutoTable.finalY + 8;
 
+    // Sensitivity analysis table
+    if (sensitivityRows?.length) {
+      if (y > 220) { doc.addPage(); y = 14; }
+      doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(37,99,235);
+      doc.text("Sensitivity Analysis", M, y); y += 6;
+      doc.setDrawColor(37,99,235); doc.line(M, y, W-M, y); y += 4;
+      autoTable(doc, { startY: y, margin:{left:M,right:M}, theme:"striped",
+        headStyles:{fillColor:[37,99,235],fontSize:8,textColor:255},
+        styles:{fontSize:9,cellPadding:2},
+        head:[["Scenario","Break-Even","ROI","Net Savings"]],
+        body: sensitivityRows.map(r => [
+          r.label,
+          r.bep,
+          r.roi >= 0 ? `${r.roi}%` : `${r.roi}%`,
+          r.savings >= 0 ? `+$${c(r.savings)}` : `-$${c(Math.abs(r.savings))}`,
+        ]),
+        didParseCell: (data) => {
+          if (data.section === "body" && sensitivityRows[data.row.index]?.base) {
+            data.cell.styles.fillColor = [219,234,254];
+            data.cell.styles.fontStyle = "bold";
+          }
+        },
+        columnStyles:{0:{cellWidth:80}},
+      });
+      y = doc.lastAutoTable.finalY + 8;
+    }
+
     // Year-by-year table
     if (y > 220) { doc.addPage(); y = 14; }
     doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(37,99,235);
@@ -148,9 +176,11 @@ export default function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, c
     const fileName = `SR-ROI-Report_${safe(client||project||"export")}_${safe(author)}_${now.toISOString().slice(0,10)}.pdf`;
     return { doc, fileName };
   };
-  const generatePdf = () => { const { doc, fileName } = buildInternalPdf(); doc.save(fileName); };
+  const generatePdf = async () => { const { doc, fileName } = await buildInternalPdf(); doc.save(fileName); };
 
-  const buildQuotationPdf = () => {
+  const buildQuotationPdf = async () => {
+    const { default: jsPDF } = await import("jspdf");
+    const { default: autoTable } = await import("jspdf-autotable");
     const doc = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
     const now = new Date();
     const dateStr = now.toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
@@ -358,7 +388,7 @@ export default function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, c
     const fileName = `SR-Quotation_${safe(client||"Client")}_${safe(salesRep)}_${now.toISOString().slice(0,10)}.pdf`;
     return { doc, fileName };
   };
-  const generateQuotationPdf = () => { const { doc, fileName } = buildQuotationPdf(); doc.save(fileName); };
+  const generateQuotationPdf = async () => { const { doc, fileName } = await buildQuotationPdf(); doc.save(fileName); };
 
   const [driveLoading, setDriveLoading] = useState(null);
   const [driveError, setDriveError] = useState(null);
@@ -368,7 +398,7 @@ export default function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, c
     try {
       let token = driveToken || await requestDriveToken();
       if (!token) { setDriveLoading("noauth"); setTimeout(() => setDriveLoading(null), 6000); return; }
-      const { doc, fileName } = m === "internal" ? buildInternalPdf() : buildQuotationPdf();
+      const { doc, fileName } = m === "internal" ? await buildInternalPdf() : await buildQuotationPdf();
       const blob = doc.output("blob");
       try {
         await uploadToDrive(token, blob, fileName);

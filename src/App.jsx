@@ -54,7 +54,7 @@ export default function App() {
   }, [accessToken, showToast]);
 
   // Sheets 호출 시 401 만료 → 자동 재인증 후 1회 재시도
-  const sheetsWithRetry = async (fn) => {
+  const sheetsWithRetry = useCallback(async (fn) => {
     try { return await fn(accessToken); }
     catch (e) {
       if (!e.message.startsWith("401")) throw e;
@@ -63,7 +63,7 @@ export default function App() {
       if (!newTok) throw e;
       return await fn(newTok);
     }
-  };
+  }, [accessToken, requestSheetsToken, showToast]);
 
   // Sheets 재로드 후 syncId 기준으로 loadedRowIndex 갱신 (팀 공유로 rowIndex 밀릴 수 있음)
   const reloadAndSync = async (syncId) => {
@@ -203,7 +203,7 @@ export default function App() {
       setCacheSaveStatus("saved");
       cacheSaveTimerRef.current = setTimeout(() => setCacheSaveStatus(null), 2000);
     }
-  }, [sites, hwConfig, hwCounts, annThruput, laborInputs]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sites, hwConfig, hwCounts, annThruput, laborInputs, showToast]);
 
   const cd = COUNTRIES[cKey];
   const capexBase = capexHW + capexNRE * diffFactor + capexInst + capexOther;
@@ -631,6 +631,7 @@ export default function App() {
           opexMode={opexMode} opexArea={opexArea} life={life} projYrs={projYrs}
           loadedName={loadedName} googleUser={googleUser}
           hwConfig={hwConfig} hwCounts={hwCounts} sites={sites}
+          sensitivityRows={sensitivityRows}
           driveToken={driveToken} requestDriveToken={requestDriveToken}
         />
       )}
