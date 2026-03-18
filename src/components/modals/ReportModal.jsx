@@ -6,7 +6,7 @@ import { uploadToDrive } from "../../utils/drive";
 export default function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, capexNRE, capexInst, capexOther,
   capexBase, capexAfterOverhead, capexAfterMargin, capexOverhead, capexMargin, capexDiscount,
   opexMode, opexArea, life, projYrs, loadedName, googleUser, hwConfig, hwCounts, sites,
-  sensitivityRows,
+  sensitivityMatrix,
   driveToken, requestDriveToken }) {
   const [mode, setMode] = useState("internal");
   const [author, setAuthor] = useState(googleUser?.name || "");
@@ -118,29 +118,40 @@ export default function ReportModal({ onClose, t, lang, R, PC, capex, capexHW, c
     });
     y = doc.lastAutoTable.finalY + 8;
 
-    // Sensitivity analysis table
-    if (sensitivityRows?.length) {
-      if (y > 220) { doc.addPage(); y = 14; }
+    // Sensitivity analysis matrix
+    if (sensitivityMatrix?.cells?.length) {
+      if (y > 200) { doc.addPage(); y = 14; }
       doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(37,99,235);
-      doc.text("Sensitivity Analysis", M, y); y += 6;
+      doc.text("Sensitivity Analysis — ROI % Matrix", M, y); y += 6;
       doc.setDrawColor(37,99,235); doc.line(M, y, W-M, y); y += 4;
-      autoTable(doc, { startY: y, margin:{left:M,right:M}, theme:"striped",
-        headStyles:{fillColor:[37,99,235],fontSize:8,textColor:255},
-        styles:{fontSize:9,cellPadding:2},
-        head:[["Scenario","Break-Even","ROI","Net Savings"]],
-        body: sensitivityRows.map(r => [
-          r.label,
-          r.bep,
-          r.roi >= 0 ? `${r.roi}%` : `${r.roi}%`,
-          r.savings >= 0 ? `+$${c(r.savings)}` : `-$${c(Math.abs(r.savings))}`,
+      const { capexLabels, laborLabels, cells } = sensitivityMatrix;
+      const colW = (W - M*2 - 22) / laborLabels.length;
+      autoTable(doc, { startY: y, margin:{left:M,right:M}, theme:"plain",
+        headStyles:{fillColor:[37,99,235],fontSize:7.5,textColor:255,halign:"center"},
+        styles:{fontSize:8,cellPadding:1.5,halign:"center"},
+        head:[["CAPEX ↓ / Labor →", ...laborLabels]],
+        body: cells.map((row, ci) => [
+          capexLabels[ci],
+          ...row.map(cell => `${cell.roi}%`),
         ]),
+        columnStyles:{ 0:{cellWidth:22, halign:"left", fontStyle:"bold"} },
         didParseCell: (data) => {
-          if (data.section === "body" && sensitivityRows[data.row.index]?.base) {
-            data.cell.styles.fillColor = [219,234,254];
-            data.cell.styles.fontStyle = "bold";
+          if (data.section === "body") {
+            const ci = data.row.index;
+            const li = data.column.index - 1;
+            if (data.column.index === 0) {
+              data.cell.styles.fillColor = ci === 2 ? [219,234,254] : [245,245,245];
+              return;
+            }
+            if (li < 0 || li >= laborLabels.length) return;
+            const cell = cells[ci]?.[li];
+            if (!cell) return;
+            if (cell.isBase) { data.cell.styles.fillColor = [191,219,254]; data.cell.styles.fontStyle = "bold"; }
+            else if (cell.roi >= 50)  data.cell.styles.fillColor = [187,247,208];
+            else if (cell.roi >= 0)   data.cell.styles.fillColor = [240,253,244];
+            else                       data.cell.styles.fillColor = [254,226,226];
           }
         },
-        columnStyles:{0:{cellWidth:80}},
       });
       y = doc.lastAutoTable.finalY + 8;
     }

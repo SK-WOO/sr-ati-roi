@@ -1,7 +1,22 @@
 // ── Version & Changelog ────────────────────────────────
-export const VERSION = "v1.12.0";
+export const VERSION = "v1.12.1";
 export const BUILD_DATE = "2026-03-18";
 export const CHANGELOG = [
+  {
+    version: "v1.12.1", date: "2026-03-18",
+    en: [
+      "Redesign: Sensitivity Analysis → 2D ROI matrix (CAPEX × Labor, both ±2 steps, free sign)",
+      "Color-coded cells: green (≥50% ROI), light green (0~50%), red (<0%), blue (Base)",
+      "Hover tooltip: BEP + Net Savings per cell",
+      "PDF: Sensitivity matrix table with matching color coding",
+    ],
+    ko: [
+      "개편: 민감도 분석 → CAPEX × 인건비 2D ROI 매트릭스 (각각 ±2단계, 부호 자유)",
+      "셀 색상 코딩: 초록(ROI ≥50%), 연초록(0~50%), 빨강(<0%), 파랑(기준)",
+      "셀 호버: BEP + 누적 절감액 표시",
+      "PDF: 동일 구조 매트릭스 테이블 (색상 코딩 포함)",
+    ],
+  },
   {
     version: "v1.12.0", date: "2026-03-18",
     en: [
