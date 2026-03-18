@@ -1,7 +1,20 @@
 // ── Version & Changelog ────────────────────────────────
-export const VERSION = "v1.12.1";
+export const VERSION = "v1.12.2";
 export const BUILD_DATE = "2026-03-18";
 export const CHANGELOG = [
+  {
+    version: "v1.12.2", date: "2026-03-18",
+    en: [
+      "Improve: Sensitivity matrix axis values are now freely editable (any sign, any value)",
+      "Replace step-based ±2s% headers with inline number inputs per row/column",
+      "Base cell (0%) auto-highlighted in blue; color coding unchanged",
+    ],
+    ko: [
+      "개선: 민감도 매트릭스 축 값 자유 입력 (부호/수치 제한 없음)",
+      "고정 ±2s% 헤더 → 행/열 헤더 직접 숫자 입력 필드로 교체",
+      "기준셀(0%) 자동 파란 강조, 색상 코딩 유지",
+    ],
+  },
   {
     version: "v1.12.1", date: "2026-03-18",
     en: [

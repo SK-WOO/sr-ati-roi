@@ -187,8 +187,8 @@ export default function App() {
   const [showScenario, setShowScenario] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [loadedId, setLoadedId] = useState(null);
-  const [sensitivityCapexStep, setSensitivityCapexStep] = useState(10);
-  const [sensitivityLaborStep, setSensitivityLaborStep] = useState(10);
+  const [sensitivityCapexDeltas, setSensitivityCapexDeltas] = useState([-20, -10, 0, 10, 20]);
+  const [sensitivityLaborDeltas, setSensitivityLaborDeltas] = useState([-20, -10, 0, 10, 20]);
   const [cacheSaveStatus, setCacheSaveStatus] = useState(null); // null | 'saved' | 'quota'
   const cacheSaveTimerRef = useRef(null);
 
@@ -569,21 +569,19 @@ export default function App() {
       const roi = modCapex > 0 ? (savings / modCapex) * 100 : 0;
       return { bep, roi: Math.round(roi), savings: Math.round(savings) };
     };
-    const cs = sensitivityCapexStep / 100;
-    const ls = sensitivityLaborStep / 100;
-    const capexMods  = [1 - cs*2, 1 - cs, 1.0, 1 + cs, 1 + cs*2];
-    const laborMods  = [1 - ls*2, 1 - ls, 1.0, 1 + ls, 1 + ls*2];
-    const s = sensitivityCapexStep;
-    const l = sensitivityLaborStep;
-    const capexLabels = [`−${s*2}%`, `−${s}%`, lang === "ko" ? "기준" : "Base", `+${s}%`, `+${s*2}%`];
-    const laborLabels = [`−${l*2}%`, `−${l}%`, lang === "ko" ? "기준" : "Base", `+${l}%`, `+${l*2}%`];
-    const cells = capexMods.map((cm, ci) =>
-      laborMods.map((lm, li) => ({ ...compute(cm, lm), isBase: ci === 2 && li === 2 }))
+    const fmtDelta = (d) => d === 0 ? (lang === "ko" ? "기준(0%)" : "Base(0%)") : `${d > 0 ? "+" : ""}${d}%`;
+    const capexLabels = sensitivityCapexDeltas.map(fmtDelta);
+    const laborLabels = sensitivityLaborDeltas.map(fmtDelta);
+    const cells = sensitivityCapexDeltas.map((cd, ci) =>
+      sensitivityLaborDeltas.map((ld, li) => ({
+        ...compute(1 + cd / 100, 1 + ld / 100),
+        isBase: cd === 0 && ld === 0,
+      }))
     );
     return { capexLabels, laborLabels, cells };
   }, [capex, life, projYrs, infl, srGrw, opexDiscount1, opexDiscountStep,
       R.annLaborBaseline, R.annLaborRemaining, R.annOpex, lang,
-      sensitivityCapexStep, sensitivityLaborStep]);
+      sensitivityCapexDeltas, sensitivityLaborDeltas]);
 
   const lbl = {
     laborBaseline:  lang === "ko" ? "기준 인건비 (100%)" : "Labor Baseline (100%)",
@@ -1266,19 +1264,7 @@ export default function App() {
               <div className="font-bold text-gray-700 text-sm">
                 {lang === "ko" ? "📊 민감도 분석" : "📊 Sensitivity Analysis"}
               </div>
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <span>CAPEX {lang === "ko" ? "간격" : "step"}</span>
-                <div className="flex items-center gap-1">
-                  <Inp v={sensitivityCapexStep} set={setSensitivityCapexStep} min={1} max={50} step={1} w="w-12" />
-                  <span>%</span>
-                </div>
-                <span className="text-gray-300">|</span>
-                <span>{lang === "ko" ? "인건비 간격" : "Labor step"}</span>
-                <div className="flex items-center gap-1">
-                  <Inp v={sensitivityLaborStep} set={setSensitivityLaborStep} min={1} max={50} step={1} w="w-12" />
-                  <span>%</span>
-                </div>
-              </div>
+              <div className="text-xs text-gray-400">{lang === "ko" ? "헤더 숫자를 직접 수정하세요 (부호 자유)" : "Edit header values freely (any sign)"}</div>
               <div className="ml-auto flex gap-3 text-xs text-gray-400">
                 <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-green-200"></span>&gt;50%</span>
                 <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-green-50"></span>0~50%</span>
@@ -1289,12 +1275,20 @@ export default function App() {
               <table className="text-xs border-collapse w-full">
                 <thead>
                   <tr>
-                    <th className="px-2 py-1.5 text-left font-semibold text-gray-400 text-xs border border-gray-100 bg-gray-50">
+                    <th className="px-2 py-1.5 text-left font-semibold text-gray-400 border border-gray-100 bg-gray-50 whitespace-nowrap">
                       CAPEX ↓ / {lang === "ko" ? "인건비" : "Labor"} →
                     </th>
-                    {sensitivityMatrix.laborLabels.map((lbl, li) => (
-                      <th key={li} className={`px-2 py-1.5 text-center font-semibold border border-gray-100 ${li === 2 ? "bg-blue-50 text-blue-700" : "bg-gray-50 text-gray-500"}`}>
-                        {lbl}
+                    {sensitivityLaborDeltas.map((delta, li) => (
+                      <th key={li} className={`border border-gray-100 px-1 py-1 ${sensitivityLaborDeltas[li] === 0 ? "bg-blue-50" : "bg-gray-50"}`}>
+                        <div className="flex items-center justify-center gap-0.5">
+                          <input
+                            type="number"
+                            value={delta}
+                            onChange={e => setSensitivityLaborDeltas(prev => prev.map((v, i) => i === li ? Number(e.target.value) : v))}
+                            className="w-12 text-center bg-transparent border-b border-gray-300 outline-none font-semibold text-gray-600 focus:border-blue-400"
+                          />
+                          <span className="text-gray-400">%</span>
+                        </div>
                       </th>
                     ))}
                   </tr>
@@ -1302,15 +1296,23 @@ export default function App() {
                 <tbody>
                   {sensitivityMatrix.cells.map((row, ci) => (
                     <tr key={ci}>
-                      <td className={`px-2 py-1.5 font-semibold border border-gray-100 ${ci === 2 ? "bg-blue-50 text-blue-700" : "bg-gray-50 text-gray-500"}`}>
-                        {sensitivityMatrix.capexLabels[ci]}
+                      <td className={`border border-gray-100 px-1 py-1 ${sensitivityCapexDeltas[ci] === 0 ? "bg-blue-50" : "bg-gray-50"}`}>
+                        <div className="flex items-center gap-0.5">
+                          <input
+                            type="number"
+                            value={sensitivityCapexDeltas[ci]}
+                            onChange={e => setSensitivityCapexDeltas(prev => prev.map((v, i) => i === ci ? Number(e.target.value) : v))}
+                            className="w-12 text-center bg-transparent border-b border-gray-300 outline-none font-semibold text-gray-600 focus:border-blue-400"
+                          />
+                          <span className="text-gray-400 text-xs">%</span>
+                        </div>
                       </td>
                       {row.map((cell, li) => {
-                        const isBase = cell.isBase;
-                        const bg = isBase ? "bg-blue-100" : cell.roi >= 50 ? "bg-green-100" : cell.roi >= 0 ? "bg-green-50" : "bg-red-50";
-                        const txt = isBase ? "text-blue-800 font-bold" : cell.roi >= 50 ? "text-green-700 font-semibold" : cell.roi >= 0 ? "text-green-600" : "text-red-500";
+                        const bg = cell.isBase ? "bg-blue-100" : cell.roi >= 50 ? "bg-green-100" : cell.roi >= 0 ? "bg-green-50" : "bg-red-50";
+                        const txt = cell.isBase ? "text-blue-800 font-bold" : cell.roi >= 50 ? "text-green-700 font-semibold" : cell.roi >= 0 ? "text-green-600" : "text-red-500";
                         return (
-                          <td key={li} className={`text-center px-2 py-1.5 border border-gray-100 ${bg} ${txt}`} title={`BEP: ${cell.bep}  Savings: ${cell.savings >= 0 ? "+$" : "-$"}${c(Math.abs(cell.savings))}`}>
+                          <td key={li} className={`text-center px-2 py-1.5 border border-gray-100 ${bg} ${txt}`}
+                            title={`BEP: ${cell.bep}  Savings: ${cell.savings >= 0 ? "+$" : "-$"}${c(Math.abs(cell.savings))}`}>
                             {cell.roi}%
                           </td>
                         );
