@@ -757,7 +757,7 @@ export default function App() {
                 <Row label={t.otHrs}><Inp v={otHrs} set={setOtHrs} min={0} max={6} unit={t.hrs} /></Row>
                 <Row label={t.nShifts}><Inp v={nShifts} set={setNShifts} min={1} max={3} unit={t.shifts} /></Row>
                 <Row label={t.capa}><Inp v={capa} set={setCapa} min={1000} max={2000000} step={10000} unit={t.units} w="w-28" comma /></Row>
-                <Row label={t.yld}><Inp v={yld} set={setYld} min={50} max={100} step={0.5} unit={t.pct} /></Row>
+                <Row label={t.yld} hint={t.yldHint}><Inp v={yld} set={setYld} min={50} max={100} step={0.5} unit={t.pct} /></Row>
                 <Row label={t.srRatio} hint={t.srRatioHint}><Inp v={srRatio} set={setSrRatio} min={1} max={100} step={1} unit={t.pct} /></Row>
                 <div className="mt-3 bg-blue-50 rounded-lg p-3 grid grid-cols-2 gap-2 text-center text-xs">
                   <div><div className="text-gray-500">{t.effWorkDays}</div><div className="font-bold text-blue-700">{c(R.effDays)} {t.days}</div></div>
