@@ -222,6 +222,7 @@ export default function App() {
     opexDiscount1, opexDiscountStep, opexSwLicense,
     laborInputs,
     sites, hwConfig, hwCounts, annThruput,
+    sensitivityCapexDeltas, sensitivityLaborDeltas,
   });
 
   const loadPreset = (preset) => {
@@ -327,6 +328,10 @@ export default function App() {
       setHwCounts(validated);
     }
     if (p.annThruput != null) setAnnThruput(clamp(p.annThruput, 0, 2000000, 300000));
+    if (Array.isArray(p.sensitivityCapexDeltas) && p.sensitivityCapexDeltas.length === 5)
+      setSensitivityCapexDeltas(p.sensitivityCapexDeltas.map(v => (isFinite(v) ? v : 0)));
+    if (Array.isArray(p.sensitivityLaborDeltas) && p.sensitivityLaborDeltas.length === 5)
+      setSensitivityLaborDeltas(p.sensitivityLaborDeltas.map(v => (isFinite(v) ? v : 0)));
 
     setLoadedName(`${preset.brand} · ${preset.country} · ${preset.plant}`);
     setLoadedId(preset.id ?? null);
@@ -1284,7 +1289,7 @@ export default function App() {
                           <input
                             type="number"
                             value={delta}
-                            onChange={e => setSensitivityLaborDeltas(prev => prev.map((v, i) => i === li ? Number(e.target.value) : v))}
+                            onChange={e => { const n = Number(e.target.value); setSensitivityLaborDeltas(prev => prev.map((v, i) => i === li ? (isFinite(n) ? n : v) : v)); }}
                             className="w-12 text-center bg-transparent border-b border-gray-300 outline-none font-semibold text-gray-600 focus:border-blue-400"
                           />
                           <span className="text-gray-400">%</span>
@@ -1301,7 +1306,7 @@ export default function App() {
                           <input
                             type="number"
                             value={sensitivityCapexDeltas[ci]}
-                            onChange={e => setSensitivityCapexDeltas(prev => prev.map((v, i) => i === ci ? Number(e.target.value) : v))}
+                            onChange={e => { const n = Number(e.target.value); setSensitivityCapexDeltas(prev => prev.map((v, i) => i === ci ? (isFinite(n) ? n : v) : v)); }}
                             className="w-12 text-center bg-transparent border-b border-gray-300 outline-none font-semibold text-gray-600 focus:border-blue-400"
                           />
                           <span className="text-gray-400 text-xs">%</span>
