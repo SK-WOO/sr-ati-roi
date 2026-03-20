@@ -19,7 +19,9 @@ export default function useGoogleAuth() {
         client_id: CLIENT_ID,
         callback: (res) => {
           try {
-            const p = JSON.parse(atob(res.credential.split(".")[1]));
+            const b64 = res.credential.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+            const padded = b64.padEnd(b64.length + (4 - b64.length % 4) % 4, "=");
+            const p = JSON.parse(atob(padded));
             if (!p.email?.endsWith(`@${ALLOWED_DOMAIN}`)) return;
             setUser({ name: p.name, email: p.email, picture: p.picture });
             sheetsClientRef.current?.requestAccessToken({ prompt: "" });
