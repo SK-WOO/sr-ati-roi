@@ -8,6 +8,9 @@ export default function useGoogleAuth() {
   const [driveToken, setDriveToken] = useState(null);
   const sheetsClientRef = useRef(null);
   const driveClientRef = useRef(null);
+  // 진행 중인 Promise 참조 — 동시 호출 시 같은 Promise 반환
+  const sheetsInflightRef = useRef(null);
+  const driveInflightRef = useRef(null);
 
   useEffect(() => {
     const script = document.createElement("script");
@@ -44,27 +47,42 @@ export default function useGoogleAuth() {
     return () => document.head.removeChild(script);
   }, []);
 
-  const requestSheetsToken = () => new Promise((resolve) => {
-    sheetsClientRef.current.callback = (r) => {
-      if (r.access_token) { setAccessToken(r.access_token); resolve(r.access_token); }
-      else resolve(null);
-    };
-    sheetsClientRef.current.requestAccessToken({ prompt: "" });
-  });
+  const requestSheetsToken = () => {
+    // 이미 진행 중이면 같은 Promise 반환 (중복 호출 방지)
+    if (sheetsInflightRef.current) return sheetsInflightRef.current;
+    const p = new Promise((resolve) => {
+      sheetsClientRef.current.callback = (r) => {
+        sheetsInflightRef.current = null;
+        if (r.access_token) { setAccessToken(r.access_token); resolve(r.access_token); }
+        else resolve(null);
+      };
+      sheetsClientRef.current.requestAccessToken({ prompt: "" });
+    });
+    sheetsInflightRef.current = p;
+    return p;
+  };
 
-  const requestDriveToken = () => new Promise((resolve) => {
-    driveClientRef.current.callback = (r) => {
-      if (r.access_token) { setDriveToken(r.access_token); resolve(r.access_token); }
-      else resolve(null);
-    };
-    driveClientRef.current.requestAccessToken();
-  });
+  const requestDriveToken = () => {
+    if (driveInflightRef.current) return driveInflightRef.current;
+    const p = new Promise((resolve) => {
+      driveClientRef.current.callback = (r) => {
+        driveInflightRef.current = null;
+        if (r.access_token) { setDriveToken(r.access_token); resolve(r.access_token); }
+        else resolve(null);
+      };
+      driveClientRef.current.requestAccessToken();
+    });
+    driveInflightRef.current = p;
+    return p;
+  };
 
   const logout = () => {
     if (window.google) window.google.accounts.id.disableAutoSelect();
     setUser(null);
     setAccessToken(null);
     setDriveToken(null);
+    sheetsInflightRef.current = null;
+    driveInflightRef.current = null;
   };
   return { user, ready, logout, accessToken, driveToken, requestDriveToken, requestSheetsToken };
 }
