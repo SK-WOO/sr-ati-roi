@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { SRAuthGate } from "@sr/auth-gate";
 import {
   BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area,
@@ -601,7 +602,9 @@ export default function App() {
   // ── Google 로그인 화면 ──
   if (!googleUser) return <LoginScreen ready={gsiReady} />;
 
+  const ACCESS_SHEET_ID = "11yfJSCpTuX6aoxLDoAlqgCP74JhMm5ukjqPdfgLY3xo";
   return (
+    <SRAuthGate appSlug="ati-roi" sheetId={ACCESS_SHEET_ID} userEmail={googleUser.email}>
     <div className="min-h-screen bg-gray-50" style={{ fontFamily: "system-ui,sans-serif" }}>
       {toast && (
         <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl shadow-lg text-white text-sm font-semibold max-w-xs text-center ${toast.ok ? "bg-green-600" : "bg-red-500"}`}>
@@ -661,7 +664,7 @@ export default function App() {
               className="flex items-center justify-center w-8 h-8 bg-blue-800 hover:bg-blue-900 rounded-lg text-white text-sm font-bold">
               ?
             </button>
-            <a href="https://seoulrobotics.atlassian.net/wiki/x/EAAi5"
+            <a href="https://seoulrobotics.atlassian.net/wiki/spaces/~7120204b7d273e948148e7a6e61c8a943425b1/pages/3827433488"
   target="_blank" rel="noreferrer"
   title="Manual"
   className="flex items-center justify-center w-8 h-8 bg-blue-800 hover:bg-blue-900 rounded-lg text-white text-base">
@@ -1482,5 +1485,6 @@ export default function App() {
         </ErrorBoundary>
       </div>
     </div>
+    </SRAuthGate>
   );
 }
