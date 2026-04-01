@@ -602,9 +602,8 @@ export default function App() {
   // ── Google 로그인 화면 ──
   if (!googleUser) return <LoginScreen ready={gsiReady} />;
 
-  const ACCESS_SHEET_ID = "11yfJSCpTuX6aoxLDoAlqgCP74JhMm5ukjqPdfgLY3xo";
   return (
-    <SRAuthGate appSlug="ati-roi" sheetId={ACCESS_SHEET_ID} userEmail={googleUser.email}>
+    <SRAuthGate appSlug="ati-roi" proxyUrl="https://sr-gate.vercel.app/api/check-access" userEmail={googleUser.email}>
     <div className="min-h-screen bg-gray-50" style={{ fontFamily: "system-ui,sans-serif" }}>
       {toast && (
         <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl shadow-lg text-white text-sm font-semibold max-w-xs text-center ${toast.ok ? "bg-green-600" : "bg-red-500"}`}>
