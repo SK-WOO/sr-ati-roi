@@ -12,6 +12,7 @@ export default function useGoogleAuth() {
   // 진행 중인 Promise 참조 — 동시 호출 시 같은 Promise 반환
   const sheetsInflightRef = useRef(null);
   const driveInflightRef = useRef(null);
+  const refreshTimer = useRef(null);
 
   useEffect(() => {
     const script = document.createElement("script");
@@ -29,6 +30,14 @@ export default function useGoogleAuth() {
             if (!p.email?.endsWith(`@${ALLOWED_DOMAIN}`)) return;
             setIdToken(res.credential);
             setUser({ name: p.name, email: p.email, picture: p.picture });
+            // 만료 5분 전 자동 갱신 스케줄
+            if (p.exp) {
+              const ms = p.exp * 1000 - Date.now() - 5 * 60 * 1000;
+              if (refreshTimer.current) clearTimeout(refreshTimer.current);
+              if (ms > 0) refreshTimer.current = setTimeout(() => {
+                if (window.google) window.google.accounts.id.prompt();
+              }, ms);
+            }
             sheetsClientRef.current?.requestAccessToken({ prompt: "" });
           } catch {}
         },
@@ -46,7 +55,7 @@ export default function useGoogleAuth() {
       setReady(true);
     };
     document.head.appendChild(script);
-    return () => document.head.removeChild(script);
+    return () => { if (refreshTimer.current) clearTimeout(refreshTimer.current); document.head.removeChild(script); };
   }, []);
 
   const requestSheetsToken = () => {
