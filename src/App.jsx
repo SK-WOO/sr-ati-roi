@@ -26,7 +26,7 @@ import { calcOpexArea } from "./utils/calc";
 
 export default function App() {
   // ── Google Auth ──
-  const { user: googleUser, ready: gsiReady, logout: googleLogout, accessToken, driveToken, requestDriveToken, requestSheetsToken } = useGoogleAuth();
+  const { user: googleUser, idToken, ready: gsiReady, logout: googleLogout, accessToken, driveToken, requestDriveToken, requestSheetsToken } = useGoogleAuth();
 
   const [lang, setLang] = useState("en");
   const t = T[lang];
@@ -603,7 +603,7 @@ export default function App() {
   if (!googleUser) return <LoginScreen ready={gsiReady} />;
 
   return (
-    <SRAuthGate appSlug="ati-roi" proxyUrl="https://sr-gate.vercel.app/api/check-access" userEmail={googleUser.email}>
+    <SRAuthGate appSlug="ati-roi" proxyUrl="https://sr-gate.vercel.app/api/check-access" userEmail={googleUser.email} idToken={idToken}>
     <div className="min-h-screen bg-gray-50" style={{ fontFamily: "system-ui,sans-serif" }}>
       {toast && (
         <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl shadow-lg text-white text-sm font-semibold max-w-xs text-center ${toast.ok ? "bg-green-600" : "bg-red-500"}`}>

@@ -3,6 +3,7 @@ import { CLIENT_ID, ALLOWED_DOMAIN, SHEETS_SCOPE, DRIVE_SCOPE } from "../constan
 
 export default function useGoogleAuth() {
   const [user, setUser] = useState(null);
+  const [idToken, setIdToken] = useState(null);
   const [ready, setReady] = useState(false);
   const [accessToken, setAccessToken] = useState(null);
   const [driveToken, setDriveToken] = useState(null);
@@ -26,6 +27,7 @@ export default function useGoogleAuth() {
             const padded = b64.padEnd(b64.length + (4 - b64.length % 4) % 4, "=");
             const p = JSON.parse(atob(padded));
             if (!p.email?.endsWith(`@${ALLOWED_DOMAIN}`)) return;
+            setIdToken(res.credential);
             setUser({ name: p.name, email: p.email, picture: p.picture });
             sheetsClientRef.current?.requestAccessToken({ prompt: "" });
           } catch {}
@@ -79,10 +81,11 @@ export default function useGoogleAuth() {
   const logout = () => {
     if (window.google) window.google.accounts.id.disableAutoSelect();
     setUser(null);
+    setIdToken(null);
     setAccessToken(null);
     setDriveToken(null);
     sheetsInflightRef.current = null;
     driveInflightRef.current = null;
   };
-  return { user, ready, logout, accessToken, driveToken, requestDriveToken, requestSheetsToken };
+  return { user, idToken, ready, logout, accessToken, driveToken, requestDriveToken, requestSheetsToken };
 }
